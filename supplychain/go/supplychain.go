@@ -21,6 +21,7 @@ import (
     "fmt"
     "strconv"
     "strings"
+    "time"
 
     "github.com/hyperledger/fabric/core/chaincode/shim"
     pb "github.com/hyperledger/fabric/protos/peer"
@@ -29,40 +30,40 @@ import (
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
-type org {
+type org struct {
     ObjectType string `json:"docType"`
-    Name string `json:"name"`
-    OrgType int `json:"orgType"`
     Id int `json:"id"`
+    Name string `json:"name"`
+    OrgType string `json:"orgType"`
     Location string `json:"location"`
 }
-type materialsupplier {
+type materialsupplier struct {
     ObjectType string `json:"docType"`
+    BatchCode int `json:"batchCode"`
     Name string `json:"name"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
-    BatchCode int `json:"batchCode"`
     SupplyTime string `json:"supplyTime"`
 }
-type farmerMaterial {
+type farmerMaterial struct {
     ObjectType string `json:"docType"`
+    BatchCode int `json:"batchCode"`
     Name string `json:"name"`
     Qty int `json:"qty"`
-    BatchCode int `json:"batchCode"`
     Owner int `json:"owner"`
 }
-type farmerTree {
+type farmerTree struct {
     ObjectType string `json:"docType"`
+    BatchCode int `json:"batchCode"`
     Name string `json:"name"`
     Qty int `json:"qty"`
-    BatchCode int `json:"batchCode"`
     StartTime string `json:"startTime"`
     EndTime string `json:"endTime"`
     LiveTime int `json:"liveTime"`
     Location string `json:"location"`
     Owner int `json:"owner"`
 }
-type farmerMaterialTree {
+type farmerMaterialTree struct {
     ObjecType string `json:"docType"`
     MaterialBatchCode int `json:"materialBatchCode"`
     TreeBatchCode int `json:"treeBatchCode"`
@@ -70,21 +71,21 @@ type farmerMaterialTree {
     Timestamp string `json:"timestamp"`
     Owner int `json:"owner"`
 }
-type farmerProduct {
+type farmerProduct struct {
     Objectype string `json:"docType"`
+    FProductBatchCode int `json:"fProductBatchCode"`
     Timestamp string `json:"timestamp"`
     Name string `json:"name"`
     TreeBatchCode int `json:"treeBatchCode"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
-    FProductBatchCode int `json:"fProductBatchCode"`
 }
-type factoryProduct {
+type factoryProduct struct {
     Objectype string `json:"docType"`
-    Timestamp string `json:"timestamp"`
-    Name string `json:"name"`
     FProductBatchCode string `json:"fProductBatchCode"`
     productBatchCode int `json:"productBatchCode"`
+    Timestamp string `json:"timestamp"`
+    Name string `json:"name"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
 }
@@ -111,103 +112,97 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
     fmt.Println("invoke is running " + function)
 
     // Handle different functions
-    switch function {
-    case "initOrg":
-        //create a new org
+    if function == "initOrg" { //create a new org
         return t.initOrg(stub, args)
-    case "readOrg":
-        //read a org
-        return t.readOrg(stub, args)
-    case "changeOrg":
-        //change name
+    } else if function == "changeOrg" { //change name of a specific org
         return t.changeOrg(stub, args)
-    case "queryOrgs":
-        //find org based on an ad hoc rich query
-        return t.queryOrg(stub, args)
-    case "getOrgByRangeId":
-        //get org based on range query
-        return t.getOrgByRangeId(stub, args)
-    case "queryOrgByType":
-        return t.queryOrgById(stub, args)
-    default:
-        //error
-        fmt.Println("invoke did not find func: " + function)
-        return shim.Error("Received unknown function invocation")
+    } else if function == "delete" { //delete a org
+        return t.delete(stub, args)
+    } else if function == "readOrg" { //read a org
+        return t.readOrg(stub, args)
+    } else if function == "queryOrgsByType" { //find orgs for type X using rich query
+        return t.queryOrgsByType(stub, args)
+    } else if function == "queryOrgs" { //find orgs based on an ad hoc rich query
+        return t.queryOrgs(stub, args)
+    } else if function == "getHistoryForOrg" { //get history of values for a org
+        return t.getHistoryForOrg(stub, args)
     }
+
+    fmt.Println("invoke did not find func: " + function) //error
+    return shim.Error("Received unknown function invocation")
 }
 
 // ============================================================
-// initOrg - create a new marble, store into chaincode state
+// initorg - create a new org, store into chaincode state
 // ============================================================
 func (t *SimpleChaincode) initOrg(stub shim.ChaincodeStubInterface, args []string) pb.Response {
     var err error
 
-    //  0-name  1-type  2-id
-    // "asdf",  "1",  "1"
+    //   0       1       2     3
+    // "1", "adf", "1", "67.0006, -70.5476"
     if len(args) != 4 {
-        return shim.Error("Incorrect number of arguments. Expecting 3")
+        return shim.Error("Incorrect number of arguments. Expecting 4")
     }
 
     // ==== Input sanitation ====
-    fmt.Println("- start init marble")
-    if len(args[0]) == 0 {
+    fmt.Println("- start init org")
+    if len(args[0]) <= 0 {
         return shim.Error("1st argument must be a non-empty string")
     }
-    if len(args[1]) == 0 {
-        return shim.Error("1st argument must be a non-empty string")
-    }
-    if len(args[2]) == 0 {
+    if len(args[1]) <= 0 {
         return shim.Error("2nd argument must be a non-empty string")
     }
-    if len(args[3]) == 0 {
+    if len(args[2]) <= 0 {
         return shim.Error("3rd argument must be a non-empty string")
     }
-    orgName := args[0]
-    orgType, err := strconv.Atoi(args[1])
+    if len(args[3]) <= 0 {
+        return shim.Error("4th argument must be a non-empty string")
+    }
+    orgId, err := strconv.Atoi(args[0])
     if err != nil {
         return shim.Error("3rd argument must be a numeric string")
     }
-    orgId, err := strconv.Atoi(args[2])
-    if err != nil {
-        return shim.Error("3rd argument must be a numeric string")
-    }
+    orgName := args[1]
+    orgType := strings.ToLower(args[2])
+    orgLocation := strings.ToLower(args[3])
 
     // ==== Check if org already exists ====
-    orgAsBytes, err := stub.GetPrivateData("collectionOrgs", orgId)
+    orgAsBytes, err := stub.GetState(strconv.Itoa(orgId))
     if err != nil {
-        return shim.Error("Failed to get orgs: " + err.Error())
+        return shim.Error("Failed to get org: " + err.Error())
     } else if orgAsBytes != nil {
-        fmt.Println("This org already exists: " + orgId)
-        return shim.Error("This org already exists: " + orgId)
+        fmt.Println("This org already exists: " + strconv.Itoa(orgId))
+        return shim.Error("This org already exists: " + strconv.Itoa(orgId))
     }
 
     // ==== Create org object and marshal to JSON ====
     objectType := "org"
-    org := &org{objectType, orgName, orgType, orgId}
+    org := &org{objectType, orgId, orgName, orgType, orgLocation}
     orgJSONasBytes, err := json.Marshal(org)
     if err != nil {
         return shim.Error(err.Error())
     }
+
     // === Save org to state ===
-    err = stub.PutPrivateData("collectionOrgs", orgName, orgJSONasBytes)
+    err = stub.PutState(strconv.Itoa(orgId), orgJSONasBytes)
     if err != nil {
         return shim.Error(err.Error())
     }
 
-    //  ==== Index the org to enable type and name range queries, e.g. return all blue marbles ====
+    //  ==== Index the org to enable color-based range queries, e.g. return all blue orgs ====
     //  An 'index' is a normal key/value entry in state.
     //  The key is a composite key, with the elements that you want to range query on listed first.
-    //  In our case, the composite key is based on indexName~type~name.
-    //  This will enable very efficient state range queries based on composite keys matching indexName~type~*
-    indexName := "orgtype~name"
-    orgtypeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{org.OrgType, org.Name})
+    //  In our case, the composite key is based on indexName~color~name.
+    //  This will enable very efficient state range queries based on composite keys matching indexName~color~*
+    indexName := "orgType~name"
+    orgTypeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{org.OrgType, org.Name})
     if err != nil {
         return shim.Error(err.Error())
     }
     //  Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the org.
     //  Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
     value := []byte{0x00}
-    stub.PutPrivateData("collectionOrgs", orgtypeNameIndexKey, value)
+    stub.PutState(orgTypeNameIndexKey, value)
 
     // ==== org saved and indexed. Return success ====
     fmt.Println("- end init org")
@@ -215,23 +210,23 @@ func (t *SimpleChaincode) initOrg(stub shim.ChaincodeStubInterface, args []strin
 }
 
 // ===============================================
-// readOrg - read a org from chaincode state
+// readorg - read a org from chaincode state
 // ===============================================
 func (t *SimpleChaincode) readOrg(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-    var name, jsonResp string
+    var orgId, jsonResp string
     var err error
 
     if len(args) != 1 {
-        return shim.Error("Incorrect number of arguments. Expecting id of the org to query")
+        return shim.Error("Incorrect number of arguments. Expecting name of the org to query")
     }
 
-    id = args[0]
-    valAsbytes, err := stub.GetPrivateData("collectionOrgs", id) //get the marble from chaincode state
+    orgId = args[0]
+    valAsbytes, err := stub.GetState(orgId) //get the org from chaincode state
     if err != nil {
-        jsonResp = "{\"Error\":\"Failed to get state for " + id + "\"}"
+        jsonResp = "{\"Error\":\"Failed to get state for " + orgId + "\"}"
         return shim.Error(jsonResp)
     } else if valAsbytes == nil {
-        jsonResp = "{\"Error\":\"Org does not exist: " + id + "\"}"
+        jsonResp = "{\"Error\":\"org does not exist: " + orgId + "\"}"
         return shim.Error(jsonResp)
     }
 
@@ -247,64 +242,66 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
     if len(args) != 1 {
         return shim.Error("Incorrect number of arguments. Expecting 1")
     }
-    orgId, err := strconv.Atoi(args[0])
+    orgId, err:= strconv.Atoi(args[0])
     if err != nil {
         return shim.Error("1rd argument must be a numeric string")
     }
 
-    // to maintain the
-    valAsbytes, err := stub.GetPrivateData("collectionOrgs", orgId) //get the org from chaincode state
+    // to maintain the color~name index, we need to read the org first and get its color
+    valAsbytes, err := stub.GetState(strconv.Itoa(orgId)) //get the org from chaincode state
     if err != nil {
-        jsonResp = "{\"Error\":\"Failed to get state for " + orgId + "\"}"
+        jsonResp = "{\"Error\":\"Failed to get state for " + strconv.Itoa(orgId) + "\"}"
         return shim.Error(jsonResp)
     } else if valAsbytes == nil {
-        jsonResp = "{\"Error\":\"Marble does not exist: " + orgId + "\"}"
+        jsonResp = "{\"Error\":\"org does not exist: " + strconv.Itoa(orgId) + "\"}"
         return shim.Error(jsonResp)
     }
 
     err = json.Unmarshal([]byte(valAsbytes), &orgJSON)
     if err != nil {
-        jsonResp = "{\"Error\":\"Failed to decode JSON of: " + orgId + "\"}"
+        jsonResp = "{\"Error\":\"Failed to decode JSON of: " + strconv.Itoa(orgId) + "\"}"
         return shim.Error(jsonResp)
     }
 
-    err = stub.DelPrivateData("collectionOrgs", orgId) //remove the marble from chaincode state
+    err = stub.DelState(strconv.Itoa(orgId)) //remove the org from chaincode state
     if err != nil {
         return shim.Error("Failed to delete state:" + err.Error())
     }
 
     // maintain the index
-    indexName := "orgtype~name"
-    orgtypeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{orgJSON.OrgType, orgJSON.Name})
+    indexName := "orgType~name"
+    orgTypeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{orgJSON.OrgType, orgJSON.Name})
     if err != nil {
         return shim.Error(err.Error())
     }
 
     //  Delete index entry to state.
-    err = stub.DelPrivateData("collectionOrgs", orgtypeNameIndexKey)
+    err = stub.DelState(orgTypeNameIndexKey)
     if err != nil {
         return shim.Error("Failed to delete state:" + err.Error())
     }
-
     return shim.Success(nil)
 }
 
 // ===========================================================
-// change a org by setting a new name on the org
+// transfer a org by setting a new owner name on the org
 // ===========================================================
 func (t *SimpleChaincode) changeOrg(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     //   0       1
-    // "name", "bob"
+    // "1", "org1"
     if len(args) < 2 {
         return shim.Error("Incorrect number of arguments. Expecting 2")
     }
 
-    orgId := args[0]
-    orgName := strings.ToLower(args[1])
-    fmt.Println("- start transferMarble ", orgId, orgName)
+    orgId, err:= strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    newOrgName := strings.ToLower(args[1])
+    fmt.Println("- start transferorg ", orgId, newOrgName)
 
-    orgAsBytes, err := stub.GetPrivateData("collectionOrgs", orgId)
+    orgAsBytes, err := stub.GetState(strconv.Itoa(orgId))
     if err != nil {
         return shim.Error("Failed to get org:" + err.Error())
     } else if orgAsBytes == nil {
@@ -316,74 +313,29 @@ func (t *SimpleChaincode) changeOrg(stub shim.ChaincodeStubInterface, args []str
     if err != nil {
         return shim.Error(err.Error())
     }
-    orgToTransfer.Name = orgName //change the org name
+    orgToTransfer.Name = newOrgName //change the name
 
     orgJSONasBytes, _ := json.Marshal(orgToTransfer)
-    err = stub.PutPrivateData("collectionOrgs", orgName, orgJSONasBytes) //rewrite the org
+    err = stub.PutState(strconv.Itoa(orgId), orgJSONasBytes) //rewrite the org
     if err != nil {
         return shim.Error(err.Error())
     }
 
-    fmt.Println("- end transferOrg (success)")
+    fmt.Println("- end transferorg (success)")
     return shim.Success(nil)
 }
 
+func (t *SimpleChaincode) queryOrgsByType(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-func (t *SimpleChaincode) getOrgByRangeId(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-    if len(args) < 2 {
-        return shim.Error("Incorrect number of arguments. Expecting 2")
-    }
-
-    startKey := args[0]
-    endKey := args[1]
-
-    resultsIterator, err := stub.GetPrivateDataByRange("collectionOrgs", startKey, endKey)
-    if err != nil {
-        return shim.Error(err.Error())
-    }
-    defer resultsIterator.Close()
-
-    // buffer is a JSON array containing QueryResults
-    var buffer bytes.Buffer
-    buffer.WriteString("[")
-
-    bArrayMemberAlreadyWritten := false
-    for resultsIterator.HasNext() {
-        queryResponse, err := resultsIterator.Next()
-        if err != nil {
-            return shim.Error(err.Error())
-        }
-        // Add a comma before array members, suppress it for the first array member
-        if bArrayMemberAlreadyWritten == true {
-            buffer.WriteString(",")
-        }
-        buffer.WriteString("{\"Key\":")
-        buffer.WriteString("\"")
-        buffer.WriteString(queryResponse.Key)
-        buffer.WriteString("\"")
-
-        buffer.WriteString(", \"Record\":")
-        // Record is a JSON object, so we write as-is
-        buffer.WriteString(string(queryResponse.Value))
-        buffer.WriteString("}")
-        bArrayMemberAlreadyWritten = true
-    }
-    buffer.WriteString("]")
-
-    fmt.Printf("- getMarblesByRange queryResult:\n%s\n", buffer.String())
-
-    return shim.Success(buffer.Bytes())
-}
-
-func (t *SimpleChaincode) queryOrgById(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    //   0
+    // "bob"
     if len(args) < 1 {
         return shim.Error("Incorrect number of arguments. Expecting 1")
     }
 
-    orgId := strings.ToLower(args[0])
+    orgType := strings.ToLower(args[0])
 
-    queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"org\",\"orgId\":\"%s\"}}", orgId)
+    queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"org\",\"orgType\":\"%s\"}}", orgType)
 
     queryResults, err := getQueryResultForQueryString(stub, queryString)
     if err != nil {
@@ -392,6 +344,13 @@ func (t *SimpleChaincode) queryOrgById(stub shim.ChaincodeStubInterface, args []
     return shim.Success(queryResults)
 }
 
+// ===== Example: Ad hoc rich query ========================================================
+// queryorgs uses a query string to perform a query for orgs.
+// Query string matching state database syntax is passed in and executed as is.
+// Supports ad hoc queries that can be defined at runtime by the client.
+// If this is not desired, follow the queryorgsForOwner example for parameterized queries.
+// Only available on state databases that support rich query (e.g. CouchDB)
+// =========================================================================================
 func (t *SimpleChaincode) queryOrgs(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
     //   0
@@ -417,7 +376,7 @@ func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString 
 
     fmt.Printf("- getQueryResultForQueryString queryString:\n%s\n", queryString)
 
-    resultsIterator, err := stub.GetPrivateDataQueryResult("collectionOrgs", queryString)
+    resultsIterator, err := stub.GetQueryResult(queryString)
     if err != nil {
         return nil, err
     }
@@ -453,4 +412,71 @@ func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString 
     fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", buffer.String())
 
     return buffer.Bytes(), nil
+}
+
+func (t *SimpleChaincode) getHistoryForOrg(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    orgId, err:= strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    fmt.Printf("- start getHistoryForOrg: %s\n", strconv.Itoa(orgId))
+
+    resultsIterator, err := stub.GetHistoryForKey(strconv.Itoa(orgId))
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    defer resultsIterator.Close()
+
+    // buffer is a JSON array containing historic values for the org
+    var buffer bytes.Buffer
+    buffer.WriteString("[")
+
+    bArrayMemberAlreadyWritten := false
+    for resultsIterator.HasNext() {
+        response, err := resultsIterator.Next()
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        // Add a comma before array members, suppress it for the first array member
+        if bArrayMemberAlreadyWritten == true {
+            buffer.WriteString(",")
+        }
+        buffer.WriteString("{\"TxId\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(response.TxId)
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"Value\":")
+        // if it was a delete operation on given key, then we need to set the
+        //corresponding value null. Else, we will write the response.Value
+        //as-is (as the Value itself a JSON org)
+        if response.IsDelete {
+            buffer.WriteString("null")
+        } else {
+            buffer.WriteString(string(response.Value))
+        }
+
+        buffer.WriteString(", \"Timestamp\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"IsDelete\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(strconv.FormatBool(response.IsDelete))
+        buffer.WriteString("\"")
+
+        buffer.WriteString("}")
+        bArrayMemberAlreadyWritten = true
+    }
+    buffer.WriteString("]")
+
+    fmt.Printf("- getHistoryForOrg returning:\n%s\n", buffer.String())
+
+    return shim.Success(buffer.Bytes())
 }
