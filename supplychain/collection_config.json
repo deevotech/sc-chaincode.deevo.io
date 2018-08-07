@@ -3,7 +3,7 @@
      "name": "collectionOrgs",
      "policy": "OR('Org1MSP.member', 'Org2MSP.member')",
      "requiredPeerCount": 0,
-     "maxPeerCount": 3,
+     "maxPeerCount": 4,
      "blockToLive":1000000
 }
 ]

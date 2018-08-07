@@ -37,13 +37,12 @@ type org struct {
     OrgType string `json:"orgType"`
     Location string `json:"location"`
 }
-type materialsupplier struct {
+type supplierMaterial struct {
     ObjectType string `json:"docType"`
     BatchCode int `json:"batchCode"`
     Name string `json:"name"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
-    SupplyTime string `json:"supplyTime"`
 }
 type farmerMaterial struct {
     ObjectType string `json:"docType"`
@@ -62,29 +61,28 @@ type farmerTree struct {
     LiveTime int `json:"liveTime"`
     Location string `json:"location"`
     Owner int `json:"owner"`
+    RateHarvest int `json:"rateharvest"`
 }
 type farmerMaterialTree struct {
     ObjecType string `json:"docType"`
     MaterialBatchCode int `json:"materialBatchCode"`
     TreeBatchCode int `json:"treeBatchCode"`
     Qty int `json:"qty"`
-    Timestamp string `json:"timestamp"`
     Owner int `json:"owner"`
 }
-type farmerProduct struct {
+type agriProduct struct {
     Objectype string `json:"docType"`
-    FProductBatchCode int `json:"fProductBatchCode"`
+    AProductBatchCode int `json:"aProductBatchCode"`
     Timestamp string `json:"timestamp"`
     Name string `json:"name"`
     TreeBatchCode int `json:"treeBatchCode"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
 }
-type factoryProduct struct {
+type product struct {
     Objectype string `json:"docType"`
-    FProductBatchCode string `json:"fProductBatchCode"`
+    AProductBatchCode string `json:"aProductBatchCode"`
     productBatchCode int `json:"productBatchCode"`
-    Timestamp string `json:"timestamp"`
     Name string `json:"name"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
@@ -126,12 +124,141 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
         return t.queryOrgs(stub, args)
     } else if function == "getHistoryForOrg" { //get history of values for a org
         return t.getHistoryForOrg(stub, args)
-    }
+    } else if function == "initSupplierMaterial" {
+        return t.initSupplierMaterial(stub, args)
+    } else if function == "sellMaterial" {
+        return t.sellMaterial(stub, args)
+    } 
+    /*else if function == "initTree" {
+        return t.initTree(stub, args)
+    } else if function == "materialToTree" {
+        return t.materialToTree(stub, args)
+    } else if function == "harvestAgriProduct" {
+        return t.harvestAgriProduct(stub, args)
+    } else if function == "sellAgriProduct" {
+        return t.sellAgriProduct(stub, args)
+    } else if function == "makeProduct" {
+        return t.makeProduct(stub, args)
+    } else if function == "sellProduct" {
+        return t.sellProduct(stub, args)
+    }*/
 
     fmt.Println("invoke did not find func: " + function) //error
     return shim.Error("Received unknown function invocation")
 }
+// ============================================================
+// initorg - create a new material, store into chaincode state
+// ============================================================
+func (t *SimpleChaincode) initSupplierMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    var err error
+    // 0         1    2    3
+    // bachcode name qty owner
+    // 1        material1  2  1
+    if len(args) != 4 {
+        return shim.Error("Incorrect number of arguments. Expecting 4")
+    }
+    // ==== Input sanitation ====
+    fmt.Println("- start init material")
+    if len(args[0]) <= 0 {
+        return shim.Error("1st argument must be a non-empty string")
+    }
+    if len(args[1]) <= 0 {
+        return shim.Error("2nd argument must be a non-empty string")
+    }
+    if len(args[2]) <= 0 {
+        return shim.Error("3rd argument must be a non-empty string")
+    }
+    if len(args[3]) <= 0 {
+        return shim.Error("4th argument must be a non-empty string")
+    }
+    batchcode, err := strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    name := strings.ToLower(args[1])
+    qty, err := strconv.Atoi(args[2])
+    if err != nil {
+        return shim.Error("3rd argument must be a numeric string")
+    }
+    owner, err := strconv.Atoi(args[3])
+    if err != nil {
+        return shim.Error("4rd argument must be a numeric string")
+    }
 
+    // ==== Check if org already exists ====
+    supplierMaterialAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get supplier material: " + err.Error())
+    } else if supplierMaterialAsBytes != nil {
+        fmt.Println("This supplier material already exists: " + name)
+        return shim.Error("This supplier material already exists: " + name)
+    }
+
+    // ==== Create supplierMaterial object and marshal to JSON ====
+    objectType := "supplierMaterial"
+    supplierMaterial := &supplierMaterial{objectType, batchcode, name, qty, owner}
+    supplierMaterialJSONasBytes, err := json.Marshal(supplierMaterial)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    // === Save org to state ===
+    err = stub.PutState(name, supplierMaterialJSONasBytes)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    indexName := "materialBatchcode-name"
+    batchcodeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{strconv.Itoa(supplierMaterial.BatchCode), supplierMaterial.Name})
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    value := []byte{0x00}
+    stub.PutState(batchcodeNameIndexKey, value)
+
+    // ==== org saved and indexed. Return success ====
+    fmt.Println("- end init supplier material")
+    return shim.Success(nil)
+}
+func (t *SimpleChaincode) sellMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    //   0       1
+    // "name", "owner"
+    // "material1" "1"
+    if len(args) < 2 {
+        return shim.Error("Incorrect number of arguments. Expecting 2")
+    }
+
+    owner, err:= strconv.Atoi(args[1])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    name := strings.ToLower(args[0])
+    fmt.Println("- start transferorg ", owner, name)
+
+    supplierMaterialAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get supplier Material:" + err.Error())
+    } else if supplierMaterialAsBytes == nil {
+        return shim.Error("supplier material does not exist")
+    }
+
+    suppplierMaterialToTransfer := supplierMaterial{}
+    err = json.Unmarshal(supplierMaterialAsBytes, &suppplierMaterialToTransfer) //unmarshal it aka JSON.parse()
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    suppplierMaterialToTransfer.Owner = owner //change the name
+
+    supplierMaterialJSONasBytes, _ := json.Marshal(suppplierMaterialToTransfer)
+    err = stub.PutState(name, supplierMaterialJSONasBytes) //rewrite the supplier Material
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    fmt.Println("- end transfeMaterial (success)")
+    return shim.Success(nil)
+}
 // ============================================================
 // initorg - create a new org, store into chaincode state
 // ============================================================
