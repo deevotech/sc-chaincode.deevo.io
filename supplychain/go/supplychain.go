@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 struct org {
     ObjectType
     Name: string 
-    Type: int (1: material supply, 2: farmer, 3: factory, 4: retailer, 5: consumer)
+    Type: int (1: material supply, 2: farmer, 3: factory, 4: retailer, 5: consumer, 6: tree)
     Id: int
 }
 */
@@ -44,44 +44,31 @@ type supplierMaterial struct {
     Qty int `json:"qty"`
     Owner int `json:"owner"`
 }
-type farmerMaterial struct {
-    ObjectType string `json:"docType"`
-    BatchCode int `json:"batchCode"`
-    Name string `json:"name"`
-    Qty int `json:"qty"`
-    Owner int `json:"owner"`
-}
+
 type farmerTree struct {
     ObjectType string `json:"docType"`
-    BatchCode int `json:"batchCode"`
+    TreeId int `json:"treeId"`
     Name string `json:"name"`
     Qty int `json:"qty"`
     StartTime string `json:"startTime"`
     EndTime string `json:"endTime"`
-    LiveTime int `json:"liveTime"`
+    LiveTime string `json:"liveTime"`
     Location string `json:"location"`
     Owner int `json:"owner"`
     RateHarvest int `json:"rateharvest"`
 }
-type farmerMaterialTree struct {
-    ObjecType string `json:"docType"`
-    MaterialBatchCode int `json:"materialBatchCode"`
-    TreeBatchCode int `json:"treeBatchCode"`
-    Qty int `json:"qty"`
-    Owner int `json:"owner"`
-}
+
 type agriProduct struct {
     Objectype string `json:"docType"`
     AProductBatchCode int `json:"aProductBatchCode"`
-    Timestamp string `json:"timestamp"`
     Name string `json:"name"`
-    TreeBatchCode int `json:"treeBatchCode"`
+    TreeId int `json:"treeId"`
     Qty int `json:"qty"`
     Owner int `json:"owner"`
 }
 type product struct {
     Objectype string `json:"docType"`
-    AProductBatchCode string `json:"aProductBatchCode"`
+    AProductBatchCode int `json:"aProductBatchCode"`
     productBatchCode int `json:"productBatchCode"`
     Name string `json:"name"`
     Qty int `json:"qty"`
@@ -126,32 +113,37 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
         return t.getHistoryForOrg(stub, args)
     } else if function == "initSupplierMaterial" {
         return t.initSupplierMaterial(stub, args)
-    } else if function == "sellMaterial" {
-        return t.sellMaterial(stub, args)
+    } else if function == "changeOwnerMaterial" {
+        return t.changeOwnerMaterial(stub, args)
     } else if function == "getHistoryForMaterial" {
         return t.getHistoryForMaterial(stub, args)
     } else if function == "queryMaterialsByOwner" {
         return t.queryMaterialsByOwner(stub, args)
-    }
-    /*else if function == "initTree" {
-        return t.initTree(stub, args)
-    } else if function == "materialToTree" {
-        return t.materialToTree(stub, args)
+    } else if function == "initFarmerTree" {
+        return t.initFarmerTree(stub, args)
     } else if function == "harvestAgriProduct" {
         return t.harvestAgriProduct(stub, args)
-    } else if function == "sellAgriProduct" {
-        return t.sellAgriProduct(stub, args)
+    } else if function == "changeOwnerAgriProduct" {
+        return t.changeOwnerAgriProduct(stub, args)
     } else if function == "makeProduct" {
         return t.makeProduct(stub, args)
-    } else if function == "sellProduct" {
-        return t.sellProduct(stub, args)
-    }*/
-
+    } else if function == "changeOwnerProduct" {
+        return t.changeOwnerProduct(stub, args)
+    } else if function == "queryAgriProductByOwner" {
+        return t.queryAgriProductByOwner(stub, args)
+    } else if function == "queryProductByOwner" {
+        return t.queryProductByOwner(stub, args)
+    } else if function == "getHistoryForAgriProduct" {
+        return t.getHistoryForAgriProduct(stub, args)
+    } else if function == "getHistoryForProduct" {
+        return t.getHistoryForProduct(stub, args)
+    }
+    // getHistory AgriProduct, get HistoryProduct
     fmt.Println("invoke did not find func: " + function) //error
     return shim.Error("Received unknown function invocation")
 }
 // ============================================================
-// initorg - create a new material, store into chaincode state
+// initSupplierMaterial - create a new material, store into chaincode state
 // ============================================================
 func (t *SimpleChaincode) initSupplierMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
     var err error
@@ -225,7 +217,7 @@ func (t *SimpleChaincode) initSupplierMaterial(stub shim.ChaincodeStubInterface,
     fmt.Println("- end init supplier material")
     return shim.Success(nil)
 }
-func (t *SimpleChaincode) sellMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *SimpleChaincode) changeOwnerMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
     //   0       1
     // "name", "owner"
     // "material1" "1"
@@ -693,4 +685,549 @@ func (t *SimpleChaincode) queryMaterialsByOwner(stub shim.ChaincodeStubInterface
         return shim.Error(err.Error())
     }
     return shim.Success(queryResults)
+}
+
+// ============================================================
+// initSupplierMaterial - create a new material, store into chaincode state
+// ============================================================
+func (t *SimpleChaincode) initFarmerTree(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    var err error
+    /*ObjectType string `json:"docType"`
+    TreeId int `json:"treeId"` 0
+    Name string `json:"name"` 1
+    Qty int `json:"qty"` 2
+    StartTime string `json:"startTime"` 3
+    EndTime string `json:"endTime"` 4
+    LiveTime int `json:"liveTime"` 5
+    Location string `json:"location"` 6
+    Owner int `json:"owner"` 7
+    RateHarvest int `json:"rateharvest"` 8
+    */
+    if len(args) != 9 {
+        return shim.Error("Incorrect number of arguments. Expecting 9")
+    }
+    // ==== Input sanitation ====
+    fmt.Println("- start init material")
+    if len(args[0]) <= 0 {
+        return shim.Error("1st argument must be a non-empty string")
+    }
+    if len(args[1]) <= 0 {
+        return shim.Error("2nd argument must be a non-empty string")
+    }
+    if len(args[2]) <= 0 {
+        return shim.Error("3rd argument must be a non-empty string")
+    }
+    if len(args[3]) <= 0 {
+        return shim.Error("4th argument must be a non-empty string")
+    }
+    if len(args[4]) <= 0 {
+        return shim.Error("5th argument must be a non-empty string")
+    }
+    if len(args[5]) <= 0 {
+        return shim.Error("6th argument must be a non-empty string")
+    }
+    if len(args[6]) <= 0 {
+        return shim.Error("7th argument must be a non-empty string")
+    }
+    if len(args[7]) <= 0 {
+        return shim.Error("8th argument must be a non-empty string")
+    }
+    if len(args[8]) <= 0 {
+        return shim.Error("9th argument must be a non-empty string")
+    }
+
+    treeId, err := strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    name := strings.ToLower(args[1])
+    qty, err := strconv.Atoi(args[2])
+    if err != nil {
+        return shim.Error("3rd argument must be a numeric string")
+    }
+    starttime := strings.ToLower(args[3])
+    endtime := strings.ToLower(args[4])
+    livetime := strings.ToLower(args[5])
+    location := strings.ToLower(args[6])
+    owner, err := strconv.Atoi(args[7])
+    if err != nil {
+        return shim.Error("8rd argument must be a numeric string")
+    }
+    harvestrate, err := strconv.Atoi(args[8])
+    if err != nil {
+        return shim.Error("9rd argument must be a numeric string")
+    }
+
+    // ==== Check if farmerTree already exists ====
+    farmerTreeAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get tree: " + err.Error())
+    } else if farmerTreeAsBytes != nil {
+        fmt.Println("This stree already exists: " + name)
+        return shim.Error("This tree exists: " + name)
+    }
+
+    // ==== Create farmerTreeAs object and marshal to JSON ====
+    objectType := "farmerTree"
+    farmerTree := &farmerTree{objectType, treeId, name, qty, starttime, endtime, livetime, location, owner, harvestrate}
+    farmerTreeJSONasBytes, err := json.Marshal(farmerTree)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    // === Save org to state ===
+    err = stub.PutState(name, farmerTreeJSONasBytes)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    indexName := "owner-name"
+    ownerNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{strconv.Itoa(farmerTree.Owner), farmerTree.Name})
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    value := []byte{0x00}
+    stub.PutState(ownerNameIndexKey, value)
+    
+    orgAsBytes, err := stub.GetState(strconv.Itoa(treeId))
+    if orgAsBytes == nil {
+        objectType := "org"
+        org := &org{objectType, treeId, name, "6", "67.0006, -70.5476"}
+        orgJSONasBytes, err := json.Marshal(org)
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+    
+        // === Save org to state ===
+        err = stub.PutState(strconv.Itoa(treeId), orgJSONasBytes)
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        indexName := "orgType~name"
+        orgTypeNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{org.OrgType, org.Name})
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+
+        value := []byte{0x00}
+        stub.PutState(orgTypeNameIndexKey, value)
+
+        fmt.Println("- end init org")
+    }
+
+    fmt.Println("- end init supplier farmerTree")
+    return shim.Success(nil)
+}
+
+func (t *SimpleChaincode) harvestAgriProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    /*
+    Objectype string `json:"docType"` 
+    AProductBatchCode int `json:"aProductBatchCode"` 0
+    Name string `json:"name"` 1
+    TreeId int `json:"treeId"` 2
+    Qty int `json:"qty"` 3
+    Owner int `json:"owner"` 4
+    */
+    var err error
+ 
+    if len(args) != 6 {
+        return shim.Error("Incorrect number of arguments. Expecting 5")
+    }
+    // ==== Input sanitation ====
+    fmt.Println("- start argiProductHarvest")
+    if len(args[0]) <= 0 {
+        return shim.Error("1st argument must be a non-empty string")
+    }
+    if len(args[1]) <= 0 {
+        return shim.Error("2nd argument must be a non-empty string")
+    }
+    if len(args[2]) <= 0 {
+        return shim.Error("3rd argument must be a non-empty string")
+    }
+    if len(args[3]) <= 0 {
+        return shim.Error("4th argument must be a non-empty string")
+    }
+    if len(args[4]) <= 0 {
+        return shim.Error("5th argument must be a non-empty string")
+    }
+    batchcode, err := strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    name := strings.ToLower(args[1])
+    treeId, err := strconv.Atoi(args[2])
+    if err != nil {
+        return shim.Error("3rd argument must be a numeric string")
+    }
+    qty, err := strconv.Atoi(args[3])
+    if err != nil {
+        return shim.Error("4rd argument must be a numeric string")
+    }
+    owner, err := strconv.Atoi(args[4])
+    if err != nil {
+        return shim.Error("5rd argument must be a numeric string")
+    }
+
+    // ==== Check if agriProduct already exists ====
+    supplierMaterialAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get supplier material: " + err.Error())
+    } else if supplierMaterialAsBytes != nil {
+        fmt.Println("This supplier material already exists: " + name)
+        return shim.Error("This supplier material already exists: " + name)
+    }
+
+    // ==== Create agriproduct object and marshal to JSON ====
+    objectType := "agriProduct"
+    agriProduct := &agriProduct{objectType, batchcode, name, treeId, qty, owner}
+    agriProductJSONasBytes, err := json.Marshal(agriProduct)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    // === Save org to state ===
+    err = stub.PutState(name, agriProductJSONasBytes)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    indexName := "owner-name"
+    ownerNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{strconv.Itoa(agriProduct.Owner), agriProduct.Name})
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    value := []byte{0x00}
+    stub.PutState(ownerNameIndexKey, value)
+
+    // ==== agriProduct saved and indexed. Return success ====
+    fmt.Println("- end harvestAgriProduct")
+    return shim.Success(nil)
+}
+
+func (t *SimpleChaincode) changeOwnerAgriProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    //   0       1
+    // "name", "owner"
+    // "agriproduct1" "1"
+    if len(args) < 2 {
+        return shim.Error("Incorrect number of arguments. Expecting 2")
+    }
+
+    name := strings.ToLower(args[0])
+    owner, err:= strconv.Atoi(args[1])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    fmt.Println("- start transAgriproduct ", owner, name)
+
+    agriProductAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get agri product:" + err.Error())
+    } else if agriProductAsBytes == nil {
+        return shim.Error("supplier material does not exist")
+    }
+
+    agriProductToTransfer := agriProduct{}
+    err = json.Unmarshal(agriProductAsBytes, &agriProductToTransfer) //unmarshal it aka JSON.parse()
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    agriProductToTransfer.Owner = owner //change the name
+
+    agriProductJSONasBytes, _ := json.Marshal(agriProductToTransfer)
+    err = stub.PutState(name, agriProductJSONasBytes) //rewrite the supplier Material
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    fmt.Println("- end transfeAgriProduct (success)")
+    return shim.Success(nil)
+}
+func (t *SimpleChaincode) makeProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    /*
+    Objectype string `json:"docType"`
+    AProductBatchCode string `json:"aProductBatchCode"` 0
+    productBatchCode int `json:"productBatchCode"` 1
+    Name string `json:"name"` 2
+    Qty int `json:"qty"` 3
+    Owner int `json:"owner"` 4
+    */
+    var err error
+ 
+    if len(args) != 5 {
+        return shim.Error("Incorrect number of arguments. Expecting 5")
+    }
+    // ==== Input sanitation ====
+    fmt.Println("- start make product")
+    if len(args[0]) <= 0 {
+        return shim.Error("1st argument must be a non-empty string")
+    }
+    if len(args[1]) <= 0 {
+        return shim.Error("2nd argument must be a non-empty string")
+    }
+    if len(args[2]) <= 0 {
+        return shim.Error("3rd argument must be a non-empty string")
+    }
+    if len(args[3]) <= 0 {
+        return shim.Error("4th argument must be a non-empty string")
+    }
+    if len(args[4]) <= 0 {
+        return shim.Error("5th argument must be a non-empty string")
+    }
+    aProductBatchCode, err := strconv.Atoi(args[0])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    productBatchCode, err := strconv.Atoi(args[1])
+    if err != nil {
+        return shim.Error("2rd argument must be a numeric string")
+    }
+    name := strings.ToLower(args[2])
+    qty, err := strconv.Atoi(args[3])
+    if err != nil {
+        return shim.Error("4rd argument must be a numeric string")
+    }
+    owner, err := strconv.Atoi(args[4])
+    if err != nil {
+        return shim.Error("5rd argument must be a numeric string")
+    }
+
+    // ==== Check if Product already exists ====
+    productAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get supplier material: " + err.Error())
+    } else if productAsBytes != nil {
+        fmt.Println("This supplier material already exists: " + name)
+        return shim.Error("This supplier material already exists: " + name)
+    }
+
+    // ==== Create agriproduct object and marshal to JSON ====
+    objectType := "product"
+    product := &product{objectType, aProductBatchCode, productBatchCode, name, qty, owner}
+    productJSONasBytes, err := json.Marshal(product)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    // === Save product to state ===
+    err = stub.PutState(name, productJSONasBytes)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    indexName := "owner-name"
+    ownerNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{strconv.Itoa(product.Owner), product.Name})
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    value := []byte{0x00}
+    stub.PutState(ownerNameIndexKey, value)
+
+    // ==== product saved and indexed. Return success ====
+    fmt.Println("- end make product")
+    return shim.Success(nil)
+}
+ func (t *SimpleChaincode) changeOwnerProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+    //   0       1
+    // "name", "owner"
+    // "product1" "1"
+    if len(args) < 2 {
+        return shim.Error("Incorrect number of arguments. Expecting 2")
+    }
+
+    name := strings.ToLower(args[0])
+    owner, err:= strconv.Atoi(args[1])
+    if err != nil {
+        return shim.Error("1rd argument must be a numeric string")
+    }
+    fmt.Println("- start transferProduct ", owner, name)
+
+    productAsBytes, err := stub.GetState(name)
+    if err != nil {
+        return shim.Error("Failed to get product:" + err.Error())
+    } else if productAsBytes == nil {
+        return shim.Error("supplier material does not exist")
+    }
+
+    productToTransfer := agriProduct{}
+    err = json.Unmarshal(productAsBytes, &productToTransfer) //unmarshal it aka JSON.parse()
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    productToTransfer.Owner = owner //change the name
+
+    productJSONasBytes, _ := json.Marshal(productToTransfer)
+    err = stub.PutState(name, productJSONasBytes) //rewrite the product
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+
+    fmt.Println("- end transferProduct (success)")
+    return shim.Success(nil)
+}
+
+func (t *SimpleChaincode) queryAgriProductByOwner(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    //   0
+    // "bob"
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    owner := strings.ToLower(args[0])
+
+    queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"agriProduct\",\"owner\":\"%s\"}}", owner)
+
+    queryResults, err := getQueryResultForQueryString(stub, queryString)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    return shim.Success(queryResults)
+}
+func (t *SimpleChaincode) queryProductByOwner(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    //   0
+    // "bob"
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    owner := strings.ToLower(args[0])
+
+    queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"product\",\"owner\":\"%s\"}}", owner)
+
+    queryResults, err := getQueryResultForQueryString(stub, queryString)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    return shim.Success(queryResults)
+}
+func (t *SimpleChaincode) getHistoryForAgriProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    name := strings.ToLower(args[0])
+    fmt.Printf("- start getHistoryForAgriProduct: %s\n", name)
+
+    resultsIterator, err := stub.GetHistoryForKey(name)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    defer resultsIterator.Close()
+
+    // buffer is a JSON array containing historic values for the org
+    var buffer bytes.Buffer
+    buffer.WriteString("[")
+
+    bArrayMemberAlreadyWritten := false
+    for resultsIterator.HasNext() {
+        response, err := resultsIterator.Next()
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        // Add a comma before array members, suppress it for the first array member
+        if bArrayMemberAlreadyWritten == true {
+            buffer.WriteString(",")
+        }
+        buffer.WriteString("{\"TxId\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(response.TxId)
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"Value\":")
+        // if it was a delete operation on given key, then we need to set the
+        //corresponding value null. Else, we will write the response.Value
+        //as-is (as the Value itself a JSON org)
+        if response.IsDelete {
+            buffer.WriteString("null")
+        } else {
+            buffer.WriteString(string(response.Value))
+        }
+
+        buffer.WriteString(", \"Timestamp\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"IsDelete\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(strconv.FormatBool(response.IsDelete))
+        buffer.WriteString("\"")
+
+        buffer.WriteString("}")
+        bArrayMemberAlreadyWritten = true
+    }
+    buffer.WriteString("]")
+
+    fmt.Printf("- getHistoryForAgriProduct returning:\n%s\n", buffer.String())
+
+    return shim.Success(buffer.Bytes())
+}
+
+func (t *SimpleChaincode) getHistoryForProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    name := strings.ToLower(args[0])
+    fmt.Printf("- start getHistoryForProduct: %s\n", name)
+
+    resultsIterator, err := stub.GetHistoryForKey(name)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    defer resultsIterator.Close()
+
+    // buffer is a JSON array containing historic values for the org
+    var buffer bytes.Buffer
+    buffer.WriteString("[")
+
+    bArrayMemberAlreadyWritten := false
+    for resultsIterator.HasNext() {
+        response, err := resultsIterator.Next()
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        // Add a comma before array members, suppress it for the first array member
+        if bArrayMemberAlreadyWritten == true {
+            buffer.WriteString(",")
+        }
+        buffer.WriteString("{\"TxId\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(response.TxId)
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"Value\":")
+        // if it was a delete operation on given key, then we need to set the
+        //corresponding value null. Else, we will write the response.Value
+        //as-is (as the Value itself a JSON org)
+        if response.IsDelete {
+            buffer.WriteString("null")
+        } else {
+            buffer.WriteString(string(response.Value))
+        }
+
+        buffer.WriteString(", \"Timestamp\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"IsDelete\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(strconv.FormatBool(response.IsDelete))
+        buffer.WriteString("\"")
+
+        buffer.WriteString("}")
+        bArrayMemberAlreadyWritten = true
+    }
+    buffer.WriteString("]")
+
+    fmt.Printf("- getHistoryForProduct returning:\n%s\n", buffer.String())
+
+    return shim.Success(buffer.Bytes())
 }
