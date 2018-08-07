@@ -128,7 +128,11 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
         return t.initSupplierMaterial(stub, args)
     } else if function == "sellMaterial" {
         return t.sellMaterial(stub, args)
-    } 
+    } else if function == "getHistoryForMaterial" {
+        return t.getHistoryForMaterial(stub, args)
+    } else if function == "queryMaterialsByOwner" {
+        return t.queryMaterialsByOwner(stub, args)
+    }
     /*else if function == "initTree" {
         return t.initTree(stub, args)
     } else if function == "materialToTree" {
@@ -606,4 +610,87 @@ func (t *SimpleChaincode) getHistoryForOrg(stub shim.ChaincodeStubInterface, arg
     fmt.Printf("- getHistoryForOrg returning:\n%s\n", buffer.String())
 
     return shim.Success(buffer.Bytes())
+}
+
+func (t *SimpleChaincode) getHistoryForMaterial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    name := strings.ToLower(args[0])
+    fmt.Printf("- start getHistoryForMaterial: %s\n", name)
+
+    resultsIterator, err := stub.GetHistoryForKey(name)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    defer resultsIterator.Close()
+
+    // buffer is a JSON array containing historic values for the org
+    var buffer bytes.Buffer
+    buffer.WriteString("[")
+
+    bArrayMemberAlreadyWritten := false
+    for resultsIterator.HasNext() {
+        response, err := resultsIterator.Next()
+        if err != nil {
+            return shim.Error(err.Error())
+        }
+        // Add a comma before array members, suppress it for the first array member
+        if bArrayMemberAlreadyWritten == true {
+            buffer.WriteString(",")
+        }
+        buffer.WriteString("{\"TxId\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(response.TxId)
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"Value\":")
+        // if it was a delete operation on given key, then we need to set the
+        //corresponding value null. Else, we will write the response.Value
+        //as-is (as the Value itself a JSON org)
+        if response.IsDelete {
+            buffer.WriteString("null")
+        } else {
+            buffer.WriteString(string(response.Value))
+        }
+
+        buffer.WriteString(", \"Timestamp\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+        buffer.WriteString("\"")
+
+        buffer.WriteString(", \"IsDelete\":")
+        buffer.WriteString("\"")
+        buffer.WriteString(strconv.FormatBool(response.IsDelete))
+        buffer.WriteString("\"")
+
+        buffer.WriteString("}")
+        bArrayMemberAlreadyWritten = true
+    }
+    buffer.WriteString("]")
+
+    fmt.Printf("- getHistoryForMaterial returning:\n%s\n", buffer.String())
+
+    return shim.Success(buffer.Bytes())
+}
+
+func (t *SimpleChaincode) queryMaterialsByOwner(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+    //   0
+    // "bob"
+    if len(args) < 1 {
+        return shim.Error("Incorrect number of arguments. Expecting 1")
+    }
+
+    owner := strings.ToLower(args[0])
+
+    queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"supplierMaterial\",\"owner\":\"%s\"}}", owner)
+
+    queryResults, err := getQueryResultForQueryString(stub, queryString)
+    if err != nil {
+        return shim.Error(err.Error())
+    }
+    return shim.Success(queryResults)
 }
