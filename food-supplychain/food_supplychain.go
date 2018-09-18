@@ -56,13 +56,11 @@ type Log struct {
 
 // InitData model
 type InitData struct {
-	ORG       Org      `json:"org"`
-	Party1    Party    `json:"party_1"`
-	Party2    Party    `json:"party_2"`
-	Location1 Location `json:"location_1"`
-	Location2 Location `json:"location_2"`
-	Product1  Product  `json:"product_1"`
-	Product2  Product  `json:"product_2"`
+	ORG       Org        `json:"org"`
+	Parties   []Party    `json:"parties"`
+	Locations []Location `json:"locations"`
+	Products  []Product  `json:"products"`
+	Auditors  []Auditor  `json:"auditors"`
 }
 
 // Auditor model
@@ -74,12 +72,12 @@ type Auditor struct {
 
 // AuditAction model
 type AuditAction struct {
-	ObjectType string  `json:"docType"`
-	ID         string  `json:"id"`
-	Time       int64   `json:"time"`
-	Creator    Auditor `json:"auditor"`
-	Location   string  `json:"location"`
-	ObjectID   string  `json:"objectID"`
+	ObjectType string `json:"docType"`
+	ID         string `json:"id"`
+	Time       int64  `json:"time"`
+	Auditor    string `json:"auditor"`
+	Location   string `json:"location"`
+	ObjectID   string `json:"objectID"`
 }
 
 func main() {
@@ -166,64 +164,48 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 		return result
 	}
 
-	newParty1 := newData.Party1
-	newParty1AsBytes, err := json.Marshal(newParty1)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newParty1.ID)
-	}
-	result = t.createObject(stub, newParty1AsBytes, newParty1.ID)
-	if result.Status != 200 {
-		return result
-	}
-
-	newParty2 := newData.Party2
-	newParty2AsBytes, err := json.Marshal(newParty2)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newParty2.ID)
-	}
-	result = t.createObject(stub, newParty2AsBytes, newParty2.ID)
-	if result.Status != 200 {
-		return result
+	for _, party := range newData.Parties {
+		partyAsBytes, err := json.Marshal(party)
+		if err != nil {
+			return shim.Error("Failed to encode json of object " + party.ID)
+		}
+		result = t.createObject(stub, partyAsBytes, party.ID)
+		if result.Status != 200 {
+			return result
+		}
 	}
 
-	newLocation1 := newData.Location1
-	newLocation1AsBytes, err := json.Marshal(newLocation1)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newLocation1.ID)
-	}
-	result = t.createObject(stub, newLocation1AsBytes, newLocation1.ID)
-	if result.Status != 200 {
-		return result
-	}
-
-	newLocation2 := newData.Location2
-	newLocation2AsBytes, err := json.Marshal(newLocation2)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newLocation2.ID)
-	}
-	result = t.createObject(stub, newLocation2AsBytes, newLocation2.ID)
-	if result.Status != 200 {
-		return result
+	for _, location := range newData.Locations {
+		locationAsBytes, err := json.Marshal(location)
+		if err != nil {
+			return shim.Error("Failed to encode json of object " + location.ID)
+		}
+		result = t.createObject(stub, locationAsBytes, location.ID)
+		if result.Status != 200 {
+			return result
+		}
 	}
 
-	newProduct1 := newData.Product1
-	newProduct1AsBytes, err := json.Marshal(newProduct1)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newProduct1.ID)
-	}
-	result = t.createObject(stub, newProduct1AsBytes, newProduct1.ID)
-	if result.Status != 200 {
-		return result
+	for _, product := range newData.Products {
+		productAsBytes, err := json.Marshal(product)
+		if err != nil {
+			return shim.Error("Failed to encode json of object " + product.ID)
+		}
+		result = t.createObject(stub, productAsBytes, product.ID)
+		if result.Status != 200 {
+			return result
+		}
 	}
 
-	newProduct2 := newData.Product2
-	newProduct2AsBytes, err := json.Marshal(newProduct2)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newProduct2.ID)
-	}
-	result = t.createObject(stub, newProduct2AsBytes, newProduct2.ID)
-	if result.Status != 200 {
-		return result
+	for _, auditor := range newData.Auditors {
+		auditorAsBytes, err := json.Marshal(auditor)
+		if err != nil {
+			return shim.Error("Failed to encode json of object " + auditor.ID)
+		}
+		result = t.createObject(stub, auditorAsBytes, auditor.ID)
+		if result.Status != 200 {
+			return result
+		}
 	}
 
 	fmt.Println("- end initOrgData (success)")
