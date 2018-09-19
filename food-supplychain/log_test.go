@@ -15,7 +15,18 @@ func TestFood_CreareLog(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newLog := Log{ObjectType: "Log", ID: "Log_1", Content: "Log 1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newLog := Log{
+		ObjectType: TYPE_LOG,
+		ID:         "Log_1",
+		Time:       time.Now().Unix(),
+		Ref:        []string{"Product_1"},
+		CTE:        "test_action",
+		Content:    "Log 1",
+		Asset:      "Asset_1",
+		Product:    "Product_1",
+		Location:   "Location_1",
+	}
+
 	newLogAsBytes, err := json.Marshal(newLog)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -30,7 +41,17 @@ func TestFood_UpdateLog(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newLog := Log{ObjectType: "Log", ID: "Log_1", Content: "Log 1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newLog := Log{
+		ObjectType: TYPE_LOG,
+		ID:         "Log_1",
+		Time:       time.Now().Unix(),
+		Ref:        []string{"Product_1"},
+		CTE:        "test_action",
+		Content:    "Log 1",
+		Asset:      "Asset_1",
+		Product:    "Product_1",
+		Location:   "Location_1",
+	}
 	newLogAsBytes, err := json.Marshal(newLog)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -38,7 +59,17 @@ func TestFood_UpdateLog(t *testing.T) {
 	}
 	checkCreateLog(t, stub, newLogAsBytes, newLog)
 
-	updatedLog := Log{ObjectType: "Log", ID: "Log_1", Content: "Log 2", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	updatedLog := Log{
+		ObjectType: TYPE_LOG,
+		ID:         "Log_1",
+		Time:       time.Now().Unix(),
+		Ref:        []string{"Product_1", "product_2"},
+		CTE:        "test_action",
+		Content:    "Log 2",
+		Asset:      "Asset_1",
+		Product:    "Product_1",
+		Location:   "Location_1",
+	}
 	updatedLogAsBytes, err := json.Marshal(updatedLog)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -46,6 +77,7 @@ func TestFood_UpdateLog(t *testing.T) {
 	}
 	checkUpdateLog(t, stub, updatedLogAsBytes, updatedLog)
 }
+
 func checkCreateLog(t *testing.T, stub *shim.MockStub, logAsJSON []byte, value Log) {
 	res := stub.MockInvoke("1", [][]byte{[]byte("createLog"), logAsJSON})
 	if res.Status != shim.OK {
@@ -64,7 +96,7 @@ func checkCreateLog(t *testing.T, stub *shim.MockStub, logAsJSON []byte, value L
 		fmt.Println("Failed to decode json of Log:", err.Error())
 		t.FailNow()
 	}
-	if resLog != value {
+	if !resLog.Equals(value) {
 		fmt.Println("Query value was not as expected")
 		t.FailNow()
 	}
@@ -88,7 +120,7 @@ func checkUpdateLog(t *testing.T, stub *shim.MockStub, logAsJSON []byte, value L
 		fmt.Println("Failed to decode json:", err.Error())
 		t.FailNow()
 	}
-	if resLog != value {
+	if !resLog.Equals(value) {
 		fmt.Println("Query value was not as expected")
 		t.FailNow()
 	}

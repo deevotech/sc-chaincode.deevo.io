@@ -1,74 +1,108 @@
 package main
 
+import "sort"
+
 const (
 	CK_AUDIT_OBJ     = "auditedObject~audit"
 	CK_AUDITOR_AUDIT = "auditor~audit"
+
+	TYPE_LOG         = "log"
+	TYPE_AUDITACTION = "auditAction"
+	TYPE_AUDITOR     = "auditor"
 )
 
-// Org model
-type Org struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Address    string `json:"address"`
+// InitData model
+type InitData struct {
+	Traceable []Traceable `json:"traceable"`
+	Auditors  []Auditor   `json:"auditor"`
 }
 
-// Party model
-type Party struct {
-	ObjectType string `json:"docType"`
+// LiteModel model
+type LiteModel struct {
+	ObjectType string `json:"objectType"`
 	ID         string `json:"id"`
-	Name       string `json:"name"`
-	ORG        string `json:"org"`
 }
 
-// Location model
-type Location struct {
-	ObjectType string `json:"docType"`
+// Traceable model
+type Traceable struct {
+	ObjectType string `json:"objectType"`
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	Party      string `json:"party"`
-}
-
-// Product model
-type Product struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Location   string `json:"location"`
+	Content    string `json:"content"`
+	Parent     string `json:"parent"`
 }
 
 // Log model
 type Log struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Content    string `json:"content"`
-	Time       int64  `json:"name"`
-	Location   string `json:"location"`
-	ObjectID   string `json:"objectID"`
+	ObjectType string   `json:"objectType"`
+	ID         string   `json:"id"`
+	Time       int64    `json:"time"`
+	Ref        []string `json:"ref"`
+	CTE        string   `json:"cte"`
+	Content    string   `json:"content"`
+	Asset      string   `json:"asset"`
+	Product    string   `json:"product"`
+	Location   string   `json:"location"`
 }
 
-// InitData model
-type InitData struct {
-	ORG       Org        `json:"org"`
-	Parties   []Party    `json:"parties"`
-	Locations []Location `json:"locations"`
-	Products  []Product  `json:"products"`
-	Auditors  []Auditor  `json:"auditors"`
+// Equals compare 2 logs
+func (l *Log) Equals(other Log) bool {
+	if l.ObjectType != other.ObjectType {
+		return false
+	}
+	if l.ID != other.ID {
+		return false
+	}
+	if l.Time != other.Time {
+		return false
+	}
+	if l.CTE != other.CTE {
+		return false
+	}
+	if l.Content != other.Content {
+		return false
+	}
+	if l.Asset != other.Asset {
+		return false
+	}
+	if l.Product != other.Product {
+		return false
+	}
+	if l.Location != other.Location {
+		return false
+	}
+	if len(l.Ref) != len(other.Ref) {
+		return false
+	}
+	ref1 := make([]string, len(l.Ref))
+	ref2 := make([]string, len(other.Ref))
+	copy(l.Ref, ref1)
+	copy(other.Ref, ref2)
+	sort.Strings(ref1)
+	sort.Strings(ref2)
+	for index, item := range ref1 {
+		if item != ref2[index] {
+			return false
+		}
+	}
+	return true
 }
 
 // Auditor model
 type Auditor struct {
-	ObjectType string `json:"docType"`
+	ObjectType string `json:"objectType"`
 	ID         string `json:"id"`
 	Name       string `json:"name"`
+	Content    string `json:"content"`
 }
 
 // AuditAction model
 type AuditAction struct {
-	ObjectType string `json:"docType"`
+	ObjectType string `json:"objectType"`
 	ID         string `json:"id"`
 	Time       int64  `json:"time"`
 	Auditor    string `json:"auditor"`
 	Location   string `json:"location"`
 	ObjectID   string `json:"objectID"`
+	Content    string `json:"content"`
 }

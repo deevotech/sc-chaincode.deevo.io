@@ -15,7 +15,17 @@ func TestFood_QueryLog(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newLog := Log{ObjectType: "Log", ID: "Log_1", Content: "Log 1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newLog := Log{
+		ObjectType: TYPE_LOG,
+		ID:         "Log_1",
+		Time:       time.Now().Unix(),
+		Ref:        []string{"Product_1"},
+		CTE:        "test_action",
+		Content:    "Log 1",
+		Asset:      "Asset_1",
+		Product:    "Product_1",
+		Location:   "Location_1",
+	}
 	newLogAsBytes, err := json.Marshal(newLog)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -23,7 +33,7 @@ func TestFood_QueryLog(t *testing.T) {
 	}
 	checkCreateLog(t, stub, newLogAsBytes, newLog)
 
-	res := stub.MockInvoke("1", [][]byte{[]byte("getObject"), []byte(newLog.ID)})
+	res := stub.MockInvoke("1", [][]byte{[]byte("getObject"), []byte(newLog.ID), []byte(TYPE_LOG)})
 	if res.Status != shim.OK {
 		fmt.Println("failed", string(res.Message))
 		t.FailNow()
@@ -40,7 +50,7 @@ func TestFood_QueryLog(t *testing.T) {
 		fmt.Println("Failed to decode json of Log:", err.Error())
 		t.FailNow()
 	}
-	if resLog != newLog {
+	if !resLog.Equals(newLog) {
 		fmt.Println("Query value was not as expected")
 		t.FailNow()
 	}
@@ -52,7 +62,17 @@ func TestFood_QueryAudit(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newLog := Log{ObjectType: "Log", ID: "Log_1", Content: "Log 1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newLog := Log{
+		ObjectType: TYPE_LOG,
+		ID:         "Log_1",
+		Time:       time.Now().Unix(),
+		Ref:        []string{"Product_1"},
+		CTE:        "test_action",
+		Content:    "Log 1",
+		Asset:      "Asset_1",
+		Product:    "Product_1",
+		Location:   "Location_1",
+	}
 	newLogAsBytes, err := json.Marshal(newLog)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -61,7 +81,7 @@ func TestFood_QueryAudit(t *testing.T) {
 	checkCreateLog(t, stub, newLogAsBytes, newLog)
 
 	newAuditAction := AuditAction{
-		ObjectType: "AuditAction",
+		ObjectType: TYPE_AUDITACTION,
 		ID:         "AuditAction_1",
 		Auditor:    "auditor_1",
 		Time:       time.Now().Unix(),

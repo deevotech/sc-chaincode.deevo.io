@@ -34,22 +34,6 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	// Handle different functions
 	if function == "initOrgData" {
 		return t.initOrgData(stub, args)
-	} else if function == "createORG" { //create a new org
-		return t.createORG(stub, args)
-	} else if function == "updateORG" {
-		return t.updateORG(stub, args)
-	} else if function == "createParty" { //create a new org
-		return t.createParty(stub, args)
-	} else if function == "updateParty" {
-		return t.updateParty(stub, args)
-	} else if function == "createLocation" { //create a new org
-		return t.createLocation(stub, args)
-	} else if function == "updateLocation" {
-		return t.updateLocation(stub, args)
-	} else if function == "createProduct" { //create a new org
-		return t.createProduct(stub, args)
-	} else if function == "updateProduct" {
-		return t.updateProduct(stub, args)
 	} else if function == "createLog" { //create a new org
 		return t.createLog(stub, args)
 	} else if function == "updateLog" {
@@ -68,6 +52,8 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getAuditOfObject(stub, args)
 	} else if function == "getAuditsOfAuditor" {
 		return t.getAuditsOfAuditor(stub, args)
+	} else if function == "createTraceable" {
+		return t.createTraceable(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
@@ -88,44 +74,12 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error("Failed to decode json of ORG: " + err.Error())
 	}
 
-	newOrg := newData.ORG
-	newOrgAsBytes, err := json.Marshal(newOrg)
-	if err != nil {
-		return shim.Error("Failed to encode json of object " + newOrg.ID)
-	}
-	result := t.createObject(stub, newOrgAsBytes, newOrg.ID)
-	if result.Status != shim.OK {
-		return result
-	}
-
-	for _, party := range newData.Parties {
-		partyAsBytes, err := json.Marshal(party)
+	for _, traceable := range newData.Traceable {
+		traceableAsBytes, err := json.Marshal(traceable)
 		if err != nil {
-			return shim.Error("Failed to encode json of object " + party.ID)
+			return shim.Error("Failed to encode json of object " + traceable.ID)
 		}
-		result = t.createObject(stub, partyAsBytes, party.ID)
-		if result.Status != shim.OK {
-			return result
-		}
-	}
-
-	for _, location := range newData.Locations {
-		locationAsBytes, err := json.Marshal(location)
-		if err != nil {
-			return shim.Error("Failed to encode json of object " + location.ID)
-		}
-		result = t.createObject(stub, locationAsBytes, location.ID)
-		if result.Status != shim.OK {
-			return result
-		}
-	}
-
-	for _, product := range newData.Products {
-		productAsBytes, err := json.Marshal(product)
-		if err != nil {
-			return shim.Error("Failed to encode json of object " + product.ID)
-		}
-		result = t.createObject(stub, productAsBytes, product.ID)
+		result := t.createObject(stub, traceableAsBytes, traceable.ID)
 		if result.Status != shim.OK {
 			return result
 		}
@@ -134,9 +88,12 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 	for _, auditor := range newData.Auditors {
 		auditorAsBytes, err := json.Marshal(auditor)
 		if err != nil {
-			return shim.Error("Failed to encode json of object " + auditor.ID)
+			return shim.Error("Failed to encode json of Auditor " + auditor.ID)
 		}
-		result = t.createObject(stub, auditorAsBytes, auditor.ID)
+		if auditor.ObjectType != TYPE_AUDITOR {
+			return shim.Error("Expexted objectType " + TYPE_AUDITOR + " for Auditor")
+		}
+		result := t.createObject(stub, auditorAsBytes, auditor.ID)
 		if result.Status != shim.OK {
 			return result
 		}
@@ -146,180 +103,47 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 	return shim.Success(nil)
 }
 
-// Methods on ORG
-// ========================================
-func (t *FoodChaincode) createORG(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start createORG", args)
+// Methods of Traceable data
+func (t *FoodChaincode) createTraceable(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("- start createTraceable", args)
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
 	jsonBytes := []byte(args[0])
-	newOrg := Org{}
-	err := json.Unmarshal(jsonBytes, &newOrg)
+	newTraceable := Traceable{}
+	err := json.Unmarshal(jsonBytes, &newTraceable)
 	if err != nil {
-		return shim.Error("Failed to decode json of ORG: " + err.Error())
+		return shim.Error("Failed to decode json: " + err.Error())
 	}
 
-	result := t.createObject(stub, jsonBytes, newOrg.ID)
+	result := t.createObject(stub, jsonBytes, newTraceable.ID)
 
 	if result.Status == shim.OK {
-		fmt.Println("- end createORG (success)")
+		fmt.Println("- end createTraceable (success)")
 	}
 	return result
 }
 
-func (t *FoodChaincode) updateORG(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start updateORG", args)
+func (t *FoodChaincode) updateTraceable(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("- start updateTraceable", args)
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
 
 	jsonBytes := []byte(args[0])
-	newOrg := Org{}
-	err := json.Unmarshal(jsonBytes, &newOrg)
+	newTraceable := Traceable{}
+	err := json.Unmarshal(jsonBytes, &newTraceable)
 	if err != nil {
-		return shim.Error("Failed to decode json of ORG: " + err.Error())
+		return shim.Error("Failed to decode json: " + err.Error())
 	}
 
-	result := t.updateObject(stub, jsonBytes, newOrg.ID)
+	result := t.updateObject(stub, jsonBytes, newTraceable.ID)
 
 	if result.Status == shim.OK {
-		fmt.Println("- end updateORG (success)")
-	}
-	return shim.Success(nil)
-}
-
-// Methods on Party
-// ========================================
-func (t *FoodChaincode) createParty(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start createParty", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newParty := Party{}
-	err := json.Unmarshal(jsonBytes, &newParty)
-	if err != nil {
-		return shim.Error("Failed to decode json of Party: " + err.Error())
-	}
-
-	result := t.createObject(stub, jsonBytes, newParty.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end createParty (success)")
+		fmt.Println("- end updateTraceable (success)")
 	}
 	return result
-}
-
-func (t *FoodChaincode) updateParty(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start updateParty", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newParty := Party{}
-	err := json.Unmarshal(jsonBytes, &newParty)
-	if err != nil {
-		return shim.Error("Failed to decode json of Party: " + err.Error())
-	}
-
-	result := t.updateObject(stub, jsonBytes, newParty.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end updateParty (success)")
-	}
-	return shim.Success(nil)
-}
-
-// Methods on Location
-// ========================================
-func (t *FoodChaincode) createLocation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start createLocation", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newLocation := Location{}
-	err := json.Unmarshal(jsonBytes, &newLocation)
-	if err != nil {
-		return shim.Error("Failed to decode json of Location: " + err.Error())
-	}
-
-	result := t.createObject(stub, jsonBytes, newLocation.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end createLocation (success)")
-	}
-	return result
-}
-
-func (t *FoodChaincode) updateLocation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start updateLocation", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newLocation := Location{}
-	err := json.Unmarshal(jsonBytes, &newLocation)
-	if err != nil {
-		return shim.Error("Failed to decode json of Location: " + err.Error())
-	}
-
-	result := t.updateObject(stub, jsonBytes, newLocation.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end updateLocation (success)")
-	}
-	return shim.Success(nil)
-}
-
-// Methods on Product
-// ========================================
-func (t *FoodChaincode) createProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start createProduct", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newProduct := Product{}
-	err := json.Unmarshal(jsonBytes, &newProduct)
-	if err != nil {
-		return shim.Error("Failed to decode json of Product: " + err.Error())
-	}
-
-	result := t.createObject(stub, jsonBytes, newProduct.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end createProduct (success)")
-	}
-	return result
-}
-
-func (t *FoodChaincode) updateProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("- start updateProduct", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	jsonBytes := []byte(args[0])
-	newProduct := Product{}
-	err := json.Unmarshal(jsonBytes, &newProduct)
-	if err != nil {
-		return shim.Error("Failed to decode json of Product: " + err.Error())
-	}
-
-	result := t.updateObject(stub, jsonBytes, newProduct.ID)
-
-	if result.Status == shim.OK {
-		fmt.Println("- end updateProduct (success)")
-	}
-	return shim.Success(nil)
 }
 
 // Methods on Log
@@ -335,6 +159,9 @@ func (t *FoodChaincode) createLog(stub shim.ChaincodeStubInterface, args []strin
 	err := json.Unmarshal(jsonBytes, &newLog)
 	if err != nil {
 		return shim.Error("Failed to decode json of Log: " + err.Error())
+	}
+	if newLog.ObjectType != TYPE_LOG {
+		return shim.Error("Expexted objectType " + TYPE_LOG + " for Log")
 	}
 
 	result := t.createObject(stub, jsonBytes, newLog.ID)
@@ -356,6 +183,9 @@ func (t *FoodChaincode) updateLog(stub shim.ChaincodeStubInterface, args []strin
 	err := json.Unmarshal(jsonBytes, &newLog)
 	if err != nil {
 		return shim.Error("Failed to decode json of Log: " + err.Error())
+	}
+	if newLog.ObjectType != TYPE_LOG {
+		return shim.Error("Expexted objectType " + TYPE_LOG + " for Log")
 	}
 
 	result := t.updateObject(stub, jsonBytes, newLog.ID)
@@ -380,6 +210,9 @@ func (t *FoodChaincode) createAuditor(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error("Failed to decode json of Auditor: " + err.Error())
 	}
+	if newAuditor.ObjectType != TYPE_AUDITOR {
+		return shim.Error("Expexted objectType " + TYPE_AUDITOR + " for Auditor")
+	}
 
 	result := t.createObject(stub, jsonBytes, newAuditor.ID)
 
@@ -400,6 +233,9 @@ func (t *FoodChaincode) updateAuditor(stub shim.ChaincodeStubInterface, args []s
 	err := json.Unmarshal(jsonBytes, &newAuditor)
 	if err != nil {
 		return shim.Error("Failed to decode json of Auditor: " + err.Error())
+	}
+	if newAuditor.ObjectType != TYPE_AUDITOR {
+		return shim.Error("Expexted objectType " + TYPE_AUDITOR + " for Auditor")
 	}
 
 	result := t.updateObject(stub, jsonBytes, newAuditor.ID)
@@ -430,6 +266,9 @@ func (t *FoodChaincode) createAuditAction(stub shim.ChaincodeStubInterface, args
 	}
 	if len(newAuditAction.Auditor) < 1 {
 		return shim.Error("AuditorID can not by empty")
+	}
+	if newAuditAction.ObjectType != TYPE_AUDITACTION {
+		return shim.Error("Expexted objectType " + TYPE_AUDITACTION + " for AuditAction")
 	}
 
 	result := t.createObject(stub, jsonBytes, newAuditAction.ID)
@@ -469,6 +308,10 @@ func (t *FoodChaincode) updateAuditAction(stub shim.ChaincodeStubInterface, args
 		return shim.Error("Failed to decode json of AuditAction: " + err.Error())
 	}
 
+	if newAuditActions.ObjectType != TYPE_AUDITACTION {
+		return shim.Error("Expexted objectType " + TYPE_AUDITACTION + " for AuditAction")
+	}
+
 	result := t.updateObject(stub, jsonBytes, newAuditActions.ID)
 
 	if result.Status == shim.OK {
@@ -481,16 +324,26 @@ func (t *FoodChaincode) updateAuditAction(stub shim.ChaincodeStubInterface, args
 // ========================================
 func (t *FoodChaincode) getObject(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	fmt.Println("- start getObject", args)
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
 
 	ID := args[0]
+	objectType := args[1]
 	existedObjectAsBytes, err := stub.GetState(ID)
 	if err != nil {
 		return shim.Error("Failed to get existed Object with ID: " + ID + ", error: " + err.Error())
 	} else if existedObjectAsBytes == nil {
 		return shim.Error("Object with ID " + ID + " does not exist")
+	}
+
+	liteModel := LiteModel{}
+	err = json.Unmarshal(existedObjectAsBytes, &liteModel)
+	if err != nil {
+		return shim.Error("Failed to get decode object: " + err.Error())
+	}
+	if liteModel.ObjectType != objectType {
+		return shim.Error("ObjectType does not match")
 	}
 
 	fmt.Println("- end getObject (success)")
@@ -604,6 +457,7 @@ func (t *FoodChaincode) createObject(stub shim.ChaincodeStubInterface, bytes []b
 	if err != nil {
 		return shim.Error("Failed to create new object with ID: " + ID + ", error: " + err.Error())
 	}
+
 	return shim.Success(nil)
 }
 

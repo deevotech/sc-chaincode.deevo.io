@@ -15,7 +15,7 @@ func TestFood_CreareAuditor(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newAuditor := Auditor{ObjectType: "Auditor", ID: "Auditor_1", Name: "Auditor 1"}
+	newAuditor := Auditor{ObjectType: TYPE_AUDITOR, ID: "Auditor_1", Name: "Auditor 1"}
 	newAuditorAsBytes, err := json.Marshal(newAuditor)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -29,7 +29,7 @@ func TestFood_UpdateAuditor(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newAuditor := Auditor{ObjectType: "Auditor", ID: "Auditor_1", Name: "Auditor 1"}
+	newAuditor := Auditor{ObjectType: TYPE_AUDITOR, ID: "Auditor_1", Name: "Auditor 1"}
 	newAuditorAsBytes, err := json.Marshal(newAuditor)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -37,7 +37,7 @@ func TestFood_UpdateAuditor(t *testing.T) {
 	}
 	checkCreateAuditor(t, stub, newAuditorAsBytes, newAuditor)
 
-	updatedAuditor := Auditor{ObjectType: "Auditor", ID: "Auditor_1", Name: "Auditor 2"}
+	updatedAuditor := Auditor{ObjectType: TYPE_AUDITOR, ID: "Auditor_1", Name: "Auditor 2"}
 	updatedAuditorAsBytes, err := json.Marshal(updatedAuditor)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -52,7 +52,14 @@ func TestFood_CreareAuditAction(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newAuditAction := AuditAction{ObjectType: "AuditAction", ID: "AuditAction_1", Auditor: "Auditor_1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newAuditAction := AuditAction{
+		ObjectType: TYPE_AUDITACTION,
+		ID:         "AuditAction_1",
+		Auditor:    "Auditor_1",
+		Time:       time.Now().Unix(),
+		Location:   "Location_1",
+		ObjectID:   "Product_1",
+	}
 	newAuditActionAsBytes, err := json.Marshal(newAuditAction)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -67,7 +74,14 @@ func TestFood_UpdateAuditAction(t *testing.T) {
 
 	checkInit(t, stub, [][]byte{})
 
-	newAuditAction := AuditAction{ObjectType: "AuditAction", ID: "AuditAction_1", Auditor: "Auditor_1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Product_1"}
+	newAuditAction := AuditAction{
+		ObjectType: TYPE_AUDITACTION,
+		ID:         "AuditAction_1",
+		Auditor:    "Auditor_1",
+		Time:       time.Now().Unix(),
+		Location:   "Location_1",
+		ObjectID:   "Product_1",
+	}
 	newAuditActionAsBytes, err := json.Marshal(newAuditAction)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -75,7 +89,14 @@ func TestFood_UpdateAuditAction(t *testing.T) {
 	}
 	checkCreateAuditAction(t, stub, newAuditActionAsBytes, newAuditAction)
 
-	updatedAuditAction := AuditAction{ObjectType: "AuditAction", ID: "AuditAction_1", Auditor: "Auditor_1", Time: time.Now().Unix(), Location: "Location_2", ObjectID: "Product_2"}
+	updatedAuditAction := AuditAction{
+		ObjectType: TYPE_AUDITACTION,
+		ID:         "AuditAction_1",
+		Auditor:    "Auditor_1",
+		Time:       time.Now().Unix(),
+		Location:   "Location_2",
+		ObjectID:   "Product_2",
+	}
 	updatedAuditActionAsBytes, err := json.Marshal(updatedAuditAction)
 	if err != nil {
 		fmt.Println("Failed to encode json")
