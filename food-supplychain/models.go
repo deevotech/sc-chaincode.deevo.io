@@ -14,7 +14,7 @@ const (
 // InitData model
 type InitData struct {
 	Traceable []Traceable `json:"traceable"`
-	Auditors  []Auditor   `json:"auditor"`
+	Auditors  []Auditor   `json:"auditors"`
 }
 
 // LiteModel model
