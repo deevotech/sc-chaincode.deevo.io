@@ -12,74 +12,6 @@ import (
 type FoodChaincode struct {
 }
 
-// Org model
-type Org struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Address    string `json:"address"`
-}
-
-// Party model
-type Party struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	ORG        string `json:"org"`
-}
-
-// Location model
-type Location struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Party      string `json:"party"`
-}
-
-// Product model
-type Product struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Location   string `json:"location"`
-}
-
-// Log model
-type Log struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Content    string `json:"content"`
-	Time       int64  `json:"name"`
-	Location   string `json:"location"`
-	ObjectID   string `json:"objectID"`
-}
-
-// InitData model
-type InitData struct {
-	ORG       Org        `json:"org"`
-	Parties   []Party    `json:"parties"`
-	Locations []Location `json:"locations"`
-	Products  []Product  `json:"products"`
-	Auditors  []Auditor  `json:"auditors"`
-}
-
-// Auditor model
-type Auditor struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-}
-
-// AuditAction model
-type AuditAction struct {
-	ObjectType string `json:"docType"`
-	ID         string `json:"id"`
-	Time       int64  `json:"time"`
-	Auditor    string `json:"auditor"`
-	Location   string `json:"location"`
-	ObjectID   string `json:"objectID"`
-}
-
 func main() {
 	err := shim.Start(new(FoodChaincode))
 	if err != nil {
@@ -134,6 +66,8 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getObject(stub, args)
 	} else if function == "getAuditOfObject" {
 		return t.getAuditOfObject(stub, args)
+	} else if function == "getAuditsOfAuditor" {
+		return t.getAuditsOfAuditor(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
@@ -160,7 +94,7 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error("Failed to encode json of object " + newOrg.ID)
 	}
 	result := t.createObject(stub, newOrgAsBytes, newOrg.ID)
-	if result.Status != 200 {
+	if result.Status != shim.OK {
 		return result
 	}
 
@@ -170,7 +104,7 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 			return shim.Error("Failed to encode json of object " + party.ID)
 		}
 		result = t.createObject(stub, partyAsBytes, party.ID)
-		if result.Status != 200 {
+		if result.Status != shim.OK {
 			return result
 		}
 	}
@@ -181,7 +115,7 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 			return shim.Error("Failed to encode json of object " + location.ID)
 		}
 		result = t.createObject(stub, locationAsBytes, location.ID)
-		if result.Status != 200 {
+		if result.Status != shim.OK {
 			return result
 		}
 	}
@@ -192,7 +126,7 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 			return shim.Error("Failed to encode json of object " + product.ID)
 		}
 		result = t.createObject(stub, productAsBytes, product.ID)
-		if result.Status != 200 {
+		if result.Status != shim.OK {
 			return result
 		}
 	}
@@ -203,7 +137,7 @@ func (t *FoodChaincode) initOrgData(stub shim.ChaincodeStubInterface, args []str
 			return shim.Error("Failed to encode json of object " + auditor.ID)
 		}
 		result = t.createObject(stub, auditorAsBytes, auditor.ID)
-		if result.Status != 200 {
+		if result.Status != shim.OK {
 			return result
 		}
 	}
@@ -229,7 +163,7 @@ func (t *FoodChaincode) createORG(stub shim.ChaincodeStubInterface, args []strin
 
 	result := t.createObject(stub, jsonBytes, newOrg.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createORG (success)")
 	}
 	return result
@@ -250,7 +184,7 @@ func (t *FoodChaincode) updateORG(stub shim.ChaincodeStubInterface, args []strin
 
 	result := t.updateObject(stub, jsonBytes, newOrg.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateORG (success)")
 	}
 	return shim.Success(nil)
@@ -273,7 +207,7 @@ func (t *FoodChaincode) createParty(stub shim.ChaincodeStubInterface, args []str
 
 	result := t.createObject(stub, jsonBytes, newParty.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createParty (success)")
 	}
 	return result
@@ -294,7 +228,7 @@ func (t *FoodChaincode) updateParty(stub shim.ChaincodeStubInterface, args []str
 
 	result := t.updateObject(stub, jsonBytes, newParty.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateParty (success)")
 	}
 	return shim.Success(nil)
@@ -317,7 +251,7 @@ func (t *FoodChaincode) createLocation(stub shim.ChaincodeStubInterface, args []
 
 	result := t.createObject(stub, jsonBytes, newLocation.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createLocation (success)")
 	}
 	return result
@@ -338,7 +272,7 @@ func (t *FoodChaincode) updateLocation(stub shim.ChaincodeStubInterface, args []
 
 	result := t.updateObject(stub, jsonBytes, newLocation.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateLocation (success)")
 	}
 	return shim.Success(nil)
@@ -361,7 +295,7 @@ func (t *FoodChaincode) createProduct(stub shim.ChaincodeStubInterface, args []s
 
 	result := t.createObject(stub, jsonBytes, newProduct.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createProduct (success)")
 	}
 	return result
@@ -382,7 +316,7 @@ func (t *FoodChaincode) updateProduct(stub shim.ChaincodeStubInterface, args []s
 
 	result := t.updateObject(stub, jsonBytes, newProduct.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateProduct (success)")
 	}
 	return shim.Success(nil)
@@ -405,7 +339,7 @@ func (t *FoodChaincode) createLog(stub shim.ChaincodeStubInterface, args []strin
 
 	result := t.createObject(stub, jsonBytes, newLog.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createLog (success)")
 	}
 	return result
@@ -426,7 +360,7 @@ func (t *FoodChaincode) updateLog(stub shim.ChaincodeStubInterface, args []strin
 
 	result := t.updateObject(stub, jsonBytes, newLog.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateLog (success)")
 	}
 	return shim.Success(nil)
@@ -449,7 +383,7 @@ func (t *FoodChaincode) createAuditor(stub shim.ChaincodeStubInterface, args []s
 
 	result := t.createObject(stub, jsonBytes, newAuditor.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end createAuditor (success)")
 	}
 	return result
@@ -470,7 +404,7 @@ func (t *FoodChaincode) updateAuditor(stub shim.ChaincodeStubInterface, args []s
 
 	result := t.updateObject(stub, jsonBytes, newAuditor.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateAuditor (success)")
 	}
 	return shim.Success(nil)
@@ -491,21 +425,34 @@ func (t *FoodChaincode) createAuditAction(stub shim.ChaincodeStubInterface, args
 		return shim.Error("Failed to decode json of AuditAction: " + err.Error())
 	}
 
+	if len(newAuditAction.ObjectID) < 1 {
+		return shim.Error("ObjectID can not by empty")
+	}
+	if len(newAuditAction.Auditor) < 1 {
+		return shim.Error("AuditorID can not by empty")
+	}
+
 	result := t.createObject(stub, jsonBytes, newAuditAction.ID)
 
-	cKey, err := stub.CreateCompositeKey("auditedObject~audit", []string{newAuditAction.ObjectID, newAuditAction.ID})
-	if err != nil {
-		return shim.Error("Failed to create composite key: " + err.Error())
-	}
-	fmt.Println("save new composite key:", cKey)
-	err = stub.PutState(cKey, []byte{0x00})
-	if err != nil {
-		return shim.Error("Failed to save composite key: " + err.Error())
+	if result.Status != shim.OK {
+		fmt.Println("- end createAuditAction (failed)")
+		return result
 	}
 
-	if result.Status == 200 {
-		fmt.Println("- end createAuditAction (success)")
+	result = t.putCompositeKey(stub, CK_AUDITOR_AUDIT, []string{newAuditAction.Auditor, newAuditAction.ID})
+	if result.Status != shim.OK {
+		fmt.Println("- end createAuditAction (failed)")
+		return result
 	}
+
+	result = t.putCompositeKey(stub, CK_AUDIT_OBJ, []string{newAuditAction.ObjectID, newAuditAction.ID})
+	if result.Status != shim.OK {
+		fmt.Println("- end createAuditAction (failed)")
+		return result
+	}
+
+	fmt.Println("- end createAuditAction (success)")
+
 	return result
 }
 
@@ -524,7 +471,7 @@ func (t *FoodChaincode) updateAuditAction(stub shim.ChaincodeStubInterface, args
 
 	result := t.updateObject(stub, jsonBytes, newAuditActions.ID)
 
-	if result.Status == 200 {
+	if result.Status == shim.OK {
 		fmt.Println("- end updateAuditAction (success)")
 	}
 	return shim.Success(nil)
@@ -557,7 +504,7 @@ func (t *FoodChaincode) getAuditOfObject(stub shim.ChaincodeStubInterface, args 
 	}
 
 	ID := args[0]
-	resultsIterator, err := stub.GetStateByPartialCompositeKey("auditedObject~audit", []string{ID})
+	resultsIterator, err := stub.GetStateByPartialCompositeKey(CK_AUDIT_OBJ, []string{ID})
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -591,6 +538,58 @@ func (t *FoodChaincode) getAuditOfObject(stub shim.ChaincodeStubInterface, args 
 	return shim.Error("No audit was found")
 }
 
+func (t *FoodChaincode) getAuditsOfAuditor(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("- start getAuditsOfAuditor", args)
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	ID := args[0]
+	resultsIterator, err := stub.GetStateByPartialCompositeKey(CK_AUDITOR_AUDIT, []string{ID})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	response := []AuditAction{}
+	var i int
+	for i = 0; resultsIterator.HasNext(); i++ {
+		responseRange, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		_, compositeKeyParts, err := stub.SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		returnedAuditID := compositeKeyParts[1]
+		fmt.Printf("- found an audit:%s\n", returnedAuditID)
+
+		auditAsBytes, err := stub.GetState(returnedAuditID)
+		if err != nil {
+			return shim.Error("Failed to get existed Audit with ID: " + ID + ", error: " + err.Error())
+		} else if auditAsBytes == nil {
+			return shim.Error("Audit with ID " + ID + " does not exist")
+		}
+
+		audit := AuditAction{}
+		err = json.Unmarshal(auditAsBytes, &audit)
+		if err != nil {
+			return shim.Error("Failed to get decode audit: " + err.Error())
+		}
+		response = append(response, audit)
+	}
+
+	responseAsBytes, err := json.Marshal(response)
+	if err != nil {
+		return shim.Error("Failed to get encode response: " + err.Error())
+	}
+
+	fmt.Println("- end getAuditsOfAuditor (success)")
+	return shim.Success(responseAsBytes)
+}
+
 // Helper methods
 // ========================================
 func (t *FoodChaincode) createObject(stub shim.ChaincodeStubInterface, bytes []byte, ID string) pb.Response {
@@ -619,6 +618,19 @@ func (t *FoodChaincode) updateObject(stub shim.ChaincodeStubInterface, bytes []b
 	err = stub.PutState(ID, bytes)
 	if err != nil {
 		return shim.Error("Failed to update the object with ID: " + ID + ", error: " + err.Error())
+	}
+	return shim.Success(nil)
+}
+
+func (t *FoodChaincode) putCompositeKey(stub shim.ChaincodeStubInterface, objectType string, values []string) pb.Response {
+	cKey, err := stub.CreateCompositeKey(objectType, values)
+	if err != nil {
+		return shim.Error("Failed to create composite key: " + err.Error())
+	}
+	fmt.Println("save new composite key:", cKey)
+	err = stub.PutState(cKey, []byte{0x00})
+	if err != nil {
+		return shim.Error("Failed to save composite key: " + err.Error())
 	}
 	return shim.Success(nil)
 }

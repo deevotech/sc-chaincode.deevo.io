@@ -83,6 +83,7 @@ func TestFood_UpdateAuditAction(t *testing.T) {
 	}
 	checkUpdateAuditAction(t, stub, updatedAuditActionAsBytes, updatedAuditAction)
 }
+
 func checkCreateAuditor(t *testing.T, stub *shim.MockStub, auditorAsJSON []byte, value Auditor) {
 	res := stub.MockInvoke("1", [][]byte{[]byte("createAuditor"), auditorAsJSON})
 	if res.Status != shim.OK {

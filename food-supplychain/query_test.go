@@ -60,7 +60,14 @@ func TestFood_QueryAudit(t *testing.T) {
 	}
 	checkCreateLog(t, stub, newLogAsBytes, newLog)
 
-	newAuditAction := AuditAction{ObjectType: "AuditAction", ID: "AuditAction_1", Time: time.Now().Unix(), Location: "Location_1", ObjectID: "Log_1"}
+	newAuditAction := AuditAction{
+		ObjectType: "AuditAction",
+		ID:         "AuditAction_1",
+		Auditor:    "auditor_1",
+		Time:       time.Now().Unix(),
+		Location:   "Location_1",
+		ObjectID:   "Log_1",
+	}
 	newAuditActionAsBytes, err := json.Marshal(newAuditAction)
 	if err != nil {
 		fmt.Println("Failed to encode json")
@@ -68,6 +75,7 @@ func TestFood_QueryAudit(t *testing.T) {
 	}
 	checkCreateAuditAction(t, stub, newAuditActionAsBytes, newAuditAction)
 
+	// Get Audit by ObjectID
 	res := stub.MockInvoke("1", [][]byte{[]byte("getAuditOfObject"), []byte(newLog.ID)})
 	if res.Status != shim.OK {
 		fmt.Println("failed", string(res.Message))
@@ -86,6 +94,29 @@ func TestFood_QueryAudit(t *testing.T) {
 		t.FailNow()
 	}
 	if resAudit != newAuditAction {
+		fmt.Println("Query value was not as expected")
+		t.FailNow()
+	}
+
+	// Get Audits by AuditorID
+	res2 := stub.MockInvoke("1", [][]byte{[]byte("getAuditsOfAuditor"), []byte(newAuditAction.Auditor)})
+	if res2.Status != shim.OK {
+		fmt.Println("failed", string(res.Message))
+		t.FailNow()
+	}
+
+	if res2.Payload == nil {
+		fmt.Println("failed: no payload")
+		t.FailNow()
+	}
+
+	resAudit2 := []AuditAction{}
+	err = json.Unmarshal(res2.Payload, &resAudit2)
+	if err != nil {
+		fmt.Println("Failed to decode json of Log:", err.Error())
+		t.FailNow()
+	}
+	if len(resAudit2) != 1 || resAudit2[0] != newAuditAction {
 		fmt.Println("Query value was not as expected")
 		t.FailNow()
 	}
