@@ -56,6 +56,10 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.createTraceable(stub, args)
 	} else if function == "updateTraceable" {
 		return t.updateTraceable(stub, args)
+	} else if function == "getLogsOfSupplychain" {
+		return t.getLogsOfSupplychain(stub, args)
+	} else if function == "getLogsOfProduct" {
+		return t.getLogsOfProduct(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
@@ -168,6 +172,22 @@ func (t *FoodChaincode) createLog(stub shim.ChaincodeStubInterface, args []strin
 
 	result := t.createObject(stub, jsonBytes, newLog.ID)
 
+	if len(newLog.Supplychain) > 0 {
+		result = t.putCompositeKey(stub, CK_SC_LOG, []string{newLog.Supplychain, newLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end createLog (failed)")
+			return result
+		}
+	}
+
+	if len(newLog.Product) > 0 {
+		result = t.putCompositeKey(stub, CK_PRODUCT_LOG, []string{newLog.Product, newLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end createLog (failed)")
+			return result
+		}
+	}
+
 	if result.Status == shim.OK {
 		fmt.Println("- end createLog (success)")
 	}
@@ -190,7 +210,7 @@ func (t *FoodChaincode) updateLog(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error("Expexted objectType " + TYPE_LOG + " for Log")
 	}
 
-	result := t.updateObject(stub, jsonBytes, newLog.ID)
+	result := t.updateLogHandler(stub, jsonBytes, newLog)
 
 	if result.Status == shim.OK {
 		fmt.Println("- end updateLog (success)")
@@ -352,6 +372,96 @@ func (t *FoodChaincode) getObject(stub shim.ChaincodeStubInterface, args []strin
 	return shim.Success(existedObjectAsBytes)
 }
 
+func (t *FoodChaincode) getLogsOfSupplychain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("- start getLogsOfSupplychain", args)
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	ID := args[0]
+
+	existedObjectAsBytes, err := stub.GetState(ID)
+	if err != nil {
+		return shim.Error("Failed to get existed Supplychain with ID: " + ID + ", error: " + err.Error())
+	} else if existedObjectAsBytes == nil {
+		return shim.Error("Supplychain with ID " + ID + " does not exist")
+	}
+
+	sc := Traceable{}
+	err = json.Unmarshal(existedObjectAsBytes, &sc)
+	if err != nil {
+		return shim.Error("Failed to get decode object: " + err.Error())
+	}
+
+	if sc.ObjectType != TYPE_SUPPLYCHAIN {
+		return shim.Error("Object with ID: " + ID + "is not a Supplychain")
+	}
+
+	resultsIterator, err := stub.GetStateByPartialCompositeKey(CK_SC_LOG, []string{ID})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	result, responseAsBytes := t.getLogsFromIterator(stub, resultsIterator)
+	if err != nil {
+		return shim.Error("Failed to get encode response: " + err.Error())
+	}
+
+	if result.Status != shim.OK {
+		fmt.Println("- end getLogsOfSupplychain (failed)")
+		return result
+	}
+
+	fmt.Println("- end getLogsOfSupplychain (success)")
+	return shim.Success(responseAsBytes)
+}
+
+func (t *FoodChaincode) getLogsOfProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	fmt.Println("- start getLogsOfProduct", args)
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	ID := args[0]
+
+	existedObjectAsBytes, err := stub.GetState(ID)
+	if err != nil {
+		return shim.Error("Failed to get existed Product with ID: " + ID + ", error: " + err.Error())
+	} else if existedObjectAsBytes == nil {
+		return shim.Error("Product with ID " + ID + " does not exist")
+	}
+
+	product := Traceable{}
+	err = json.Unmarshal(existedObjectAsBytes, &product)
+	if err != nil {
+		return shim.Error("Failed to get decode object: " + err.Error())
+	}
+
+	if product.ObjectType != TYPE_PRODUCT {
+		return shim.Error("Object with ID: " + ID + "is not a Product")
+	}
+
+	resultsIterator, err := stub.GetStateByPartialCompositeKey(CK_PRODUCT_LOG, []string{ID})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	result, responseAsBytes := t.getLogsFromIterator(stub, resultsIterator)
+	if err != nil {
+		return shim.Error("Failed to get encode response: " + err.Error())
+	}
+
+	if result.Status != shim.OK {
+		fmt.Println("- end getLogsOfProduct (failed)")
+		return result
+	}
+
+	fmt.Println("- end getLogsOfProduct (success)")
+	return shim.Success(responseAsBytes)
+}
+
 func (t *FoodChaincode) getAuditOfObject(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	fmt.Println("- start getAuditOfObject", args)
 	if len(args) != 1 {
@@ -381,9 +491,9 @@ func (t *FoodChaincode) getAuditOfObject(stub shim.ChaincodeStubInterface, args 
 
 		auditAsBytes, err := stub.GetState(returnedAuditID)
 		if err != nil {
-			return shim.Error("Failed to get existed Audit with ID: " + ID + ", error: " + err.Error())
+			return shim.Error("Failed to get existed Audit with ID: " + returnedAuditID + ", error: " + err.Error())
 		} else if auditAsBytes == nil {
-			return shim.Error("Audit with ID " + ID + " does not exist")
+			return shim.Error("Audit with ID " + returnedAuditID + " does not exist")
 		}
 		fmt.Println("- end getAuditOfObject (success)")
 		return shim.Success(auditAsBytes)
@@ -423,9 +533,9 @@ func (t *FoodChaincode) getAuditsOfAuditor(stub shim.ChaincodeStubInterface, arg
 
 		auditAsBytes, err := stub.GetState(returnedAuditID)
 		if err != nil {
-			return shim.Error("Failed to get existed Audit with ID: " + ID + ", error: " + err.Error())
+			return shim.Error("Failed to get existed Audit with ID: " + returnedAuditID + ", error: " + err.Error())
 		} else if auditAsBytes == nil {
-			return shim.Error("Audit with ID " + ID + " does not exist")
+			return shim.Error("Audit with ID " + returnedAuditID + " does not exist")
 		}
 
 		audit := AuditAction{}
@@ -478,6 +588,65 @@ func (t *FoodChaincode) updateObject(stub shim.ChaincodeStubInterface, bytes []b
 	return shim.Success(nil)
 }
 
+func (t *FoodChaincode) updateLogHandler(stub shim.ChaincodeStubInterface, bytes []byte, newLog Log) pb.Response {
+	existedObjectAsBytes, err := stub.GetState(newLog.ID)
+	if err != nil {
+		return shim.Error("Failed to get existed Object with ID: " + newLog.ID + ", error: " + err.Error())
+	} else if existedObjectAsBytes == nil {
+		return shim.Error("Object with ID " + newLog.ID + " does not exist")
+	}
+
+	oldLog := Log{}
+	err = json.Unmarshal(existedObjectAsBytes, &oldLog)
+	if err != nil {
+		return shim.Error("Failed to get decode Log: " + err.Error())
+	}
+
+	var result pb.Response
+
+	if len(newLog.Supplychain) > 0 {
+		result = t.updateCompositeKey(
+			stub,
+			CK_SC_LOG,
+			[]string{oldLog.Supplychain, oldLog.ID},
+			[]string{newLog.Supplychain, newLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end updateLog (failed)")
+			return result
+		}
+	} else if len(oldLog.Supplychain) > 0 {
+		result = t.deleteCompositeKey(stub, CK_SC_LOG, []string{oldLog.Supplychain, oldLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end updateLog (failed)")
+			return result
+		}
+	}
+
+	if len(newLog.Product) > 0 {
+		result = t.updateCompositeKey(
+			stub,
+			CK_PRODUCT_LOG,
+			[]string{oldLog.Product, oldLog.ID},
+			[]string{newLog.Product, newLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end updateLog (failed)")
+			return result
+		}
+	} else if len(oldLog.Product) > 0 {
+		result = t.deleteCompositeKey(stub, CK_PRODUCT_LOG, []string{oldLog.Product, oldLog.ID})
+		if result.Status != shim.OK {
+			fmt.Println("- end updateLog (failed)")
+			return result
+		}
+	}
+
+	err = stub.PutState(newLog.ID, bytes)
+	if err != nil {
+		return shim.Error("Failed to update the object with ID: " + newLog.ID + ", error: " + err.Error())
+	}
+	return shim.Success(nil)
+}
+
 func (t *FoodChaincode) putCompositeKey(stub shim.ChaincodeStubInterface, objectType string, values []string) pb.Response {
 	cKey, err := stub.CreateCompositeKey(objectType, values)
 	if err != nil {
@@ -489,4 +658,79 @@ func (t *FoodChaincode) putCompositeKey(stub shim.ChaincodeStubInterface, object
 		return shim.Error("Failed to save composite key: " + err.Error())
 	}
 	return shim.Success(nil)
+}
+
+func (t *FoodChaincode) updateCompositeKey(stub shim.ChaincodeStubInterface, objectType string, oldValues []string, newValues []string) pb.Response {
+
+	valueChanged := false
+	for i, value := range oldValues {
+		if newValues[i] != value {
+			valueChanged = true
+			break
+		}
+	}
+
+	if !valueChanged {
+		fmt.Println("Values don't change. Don't create new composite key")
+		return shim.Success(nil)
+	}
+
+	result := t.deleteCompositeKey(stub, objectType, oldValues)
+	if result.Status != shim.OK {
+		return result
+	}
+
+	return t.putCompositeKey(stub, objectType, newValues)
+}
+
+func (t *FoodChaincode) deleteCompositeKey(stub shim.ChaincodeStubInterface, objectType string, oldValues []string) pb.Response {
+	cKey, err := stub.CreateCompositeKey(objectType, oldValues)
+	if err != nil {
+		return shim.Error("Failed to create composite key: " + err.Error())
+	}
+	err = stub.DelState(cKey)
+	if err != nil {
+		return shim.Error("Failed to delete composite key: " + err.Error())
+	}
+	fmt.Println("Deleted old composite key: ", cKey)
+
+	return shim.Success(nil)
+}
+
+func (t *FoodChaincode) getLogsFromIterator(stub shim.ChaincodeStubInterface, resultsIterator shim.StateQueryIteratorInterface) (pb.Response, []byte) {
+	response := []Log{}
+	var i int
+	for i = 0; resultsIterator.HasNext(); i++ {
+		responseRange, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error()), nil
+		}
+
+		_, compositeKeyParts, err := stub.SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return shim.Error(err.Error()), nil
+		}
+		returnedLogID := compositeKeyParts[1]
+		fmt.Printf("- found an log:%s\n", returnedLogID)
+
+		logAsBytes, err := stub.GetState(returnedLogID)
+		if err != nil {
+			return shim.Error("Failed to get existed Log with ID: " + returnedLogID + ", error: " + err.Error()), nil
+		} else if logAsBytes == nil {
+			return shim.Error("Log with ID " + returnedLogID + " does not exist"), nil
+		}
+		log := Log{}
+		err = json.Unmarshal(logAsBytes, &log)
+		if err != nil {
+			return shim.Error("Failed to get decode log: " + err.Error()), nil
+		}
+		response = append(response, log)
+	}
+
+	responseAsBytes, err := json.Marshal(response)
+	if err != nil {
+		return shim.Error("Failed to get encode response: " + err.Error()), nil
+	}
+
+	return shim.Success(nil), responseAsBytes
 }

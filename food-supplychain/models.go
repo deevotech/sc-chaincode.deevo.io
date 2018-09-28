@@ -5,8 +5,12 @@ import "sort"
 const (
 	CK_AUDIT_OBJ     = "auditedObject~audit"
 	CK_AUDITOR_AUDIT = "auditor~audit"
+	CK_SC_LOG        = "sc~log"
+	CK_PRODUCT_LOG   = "product~log"
 
 	TYPE_LOG         = "log"
+	TYPE_SUPPLYCHAIN = "supplychain"
+	TYPE_PRODUCT     = "product"
 	TYPE_AUDITACTION = "auditAction"
 	TYPE_AUDITOR     = "auditor"
 )
@@ -34,15 +38,16 @@ type Traceable struct {
 
 // Log model
 type Log struct {
-	ObjectType string   `json:"objectType"`
-	ID         string   `json:"id"`
-	Time       int64    `json:"time"`
-	Ref        []string `json:"ref"`
-	CTE        string   `json:"cte"`
-	Content    string   `json:"content"`
-	Asset      string   `json:"asset"`
-	Product    string   `json:"product"`
-	Location   string   `json:"location"`
+	ObjectType  string   `json:"objectType"`
+	ID          string   `json:"id"`
+	Time        int64    `json:"time"`
+	Ref         []string `json:"ref"`
+	CTE         string   `json:"cte"`
+	Supplychain string   `json:"supplychain_id"`
+	Content     string   `json:"content"`
+	Asset       string   `json:"asset"`
+	Product     string   `json:"product"`
+	Location    string   `json:"location"`
 }
 
 // Equals compare 2 logs
