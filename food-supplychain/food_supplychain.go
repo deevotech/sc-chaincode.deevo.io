@@ -54,6 +54,8 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getAuditsOfAuditor(stub, args)
 	} else if function == "createTraceable" {
 		return t.createTraceable(stub, args)
+	} else if function == "updateTraceable" {
+		return t.updateTraceable(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
