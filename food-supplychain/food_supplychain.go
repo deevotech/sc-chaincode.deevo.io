@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -60,6 +61,8 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getLogsOfSupplychain(stub, args)
 	} else if function == "getLogsOfProduct" {
 		return t.getLogsOfProduct(stub, args)
+	} else if function == "getQueryResultForQueryString" {
+		return t.getQueryResultForQueryString(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
@@ -553,6 +556,58 @@ func (t *FoodChaincode) getAuditsOfAuditor(stub shim.ChaincodeStubInterface, arg
 
 	fmt.Println("- end getAuditsOfAuditor (success)")
 	return shim.Success(responseAsBytes)
+}
+
+// =========================================================================================
+// getQueryResultForQueryString executes the passed in query string.
+// Result set is built and returned as a byte array containing the JSON results.
+// =========================================================================================
+func (t *FoodChaincode) getQueryResultForQueryString(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	fmt.Printf("- getQueryResultForQueryString args:\n%s\n", args)
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	queryString := args[0]
+
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing QueryRecords
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"Key\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.Key)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
 }
 
 // Helper methods

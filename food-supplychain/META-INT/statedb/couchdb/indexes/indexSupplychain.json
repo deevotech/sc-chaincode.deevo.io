@@ -1,0 +1,10 @@
+{
+    "index": {
+        "fields": [
+            "supplychain_id"
+        ]
+    },
+    "ddoc": "indexSupplychainDoc",
+    "name": "indexSupplychain",
+    "type": "json"
+}
