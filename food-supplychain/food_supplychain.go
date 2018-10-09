@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -63,6 +65,8 @@ func (t *FoodChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.getLogsOfProduct(stub, args)
 	} else if function == "getQueryResultForQueryString" {
 		return t.getQueryResultForQueryString(stub, args)
+	} else if function == "getHistoryOfObject" {
+		return t.getHistoryOfObject(stub, args)
 	}
 	// getHistory AgriProduct, get HistoryProduct
 	fmt.Println("invoke did not find func: " + function) //error
@@ -606,6 +610,74 @@ func (t *FoodChaincode) getQueryResultForQueryString(stub shim.ChaincodeStubInte
 	buffer.WriteString("]")
 
 	fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+// =========================================================================================
+// getHistoryOfObject
+// =========================================================================================
+func (t *FoodChaincode) getHistoryOfObject(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	fmt.Printf("- getHistoryOfObject args:\n%s\n", args)
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	ID := args[0]
+
+	resultsIterator, err := stub.GetHistoryForKey(ID)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing historic values for the object
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(response.TxId)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Value\":")
+		// if it was a delete operation on given key, then we need to set the
+		//corresponding value null. Else, we will write the response.Value
+		//as-is (as the Value itself a JSON org)
+		if response.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			buffer.WriteString(string(response.Value))
+		}
+
+		buffer.WriteString(", \"Timestamp\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"IsDelete\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(strconv.FormatBool(response.IsDelete))
+		buffer.WriteString("\"")
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getHistoryOfObject returning:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
 }
