@@ -67,6 +67,9 @@ func (l *Log) Equals(other Log) bool {
 	if l.Content != other.Content {
 		return false
 	}
+	if l.Supplychain != other.Supplychain {
+		return false
+	}
 	if l.Asset != other.Asset {
 		return false
 	}
