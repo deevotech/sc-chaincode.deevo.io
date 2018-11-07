@@ -10,16 +10,20 @@ import (
 	"encoding/pem"
 	"fmt"
 	"hash"
+	"io/ioutil"
 	"os"
 	"strconv"
 )
 
 // wallet
 type Wallet struct {
-	HomeDir string
-	TypeKey string
-	Length  int
-	Ops     string
+	HomeDir    string
+	TypeKey    string
+	Length     int
+	Ops        string
+	privateKey *rsa.PrivateKey
+	To_address string
+	Value      int
 }
 
 // create
@@ -30,8 +34,18 @@ func (w *Wallet) Create() error {
 		os.Exit(1)
 	}
 	publicKey := key.PublicKey
-	w.savePEMKey("private.key", key)
-	w.savePublicPEMKey("publickey.key", publicKey)
+	var path string
+	if w.HomeDir != "" {
+		path = w.HomeDir + "/"
+		err = os.MkdirAll(w.HomeDir, 0755)
+		if err != nil {
+			return err
+		}
+	} else {
+		path = "./"
+	}
+	w.savePEMKey(path+"private.key", key)
+	w.savePublicPEMKey(path+"publickey.key", publicKey)
 	return nil
 }
 
@@ -95,11 +109,11 @@ func checkError(err error) {
 		os.Exit(1)
 	}
 }
-func (w *Wallet) Sign(privateKey *rsa.PrivateKey, data string) ([]byte, []byte, []byte, hash.Hash, crypto.Hash, []byte, rsa.PSSOptions) {
+func (w *Wallet) Sign(data string) ([]byte, []byte, []byte, hash.Hash, crypto.Hash, []byte, rsa.PSSOptions) {
 	message := []byte(data)
 	label := []byte("")
 	hash := sha256.New()
-	publickey := &privateKey.PublicKey
+	publickey := &w.privateKey.PublicKey
 	ciphertext, err := rsa.EncryptOAEP(hash, rand.Reader, publickey, message, label)
 	if err != nil {
 		fmt.Println(err)
@@ -116,16 +130,37 @@ func (w *Wallet) Sign(privateKey *rsa.PrivateKey, data string) ([]byte, []byte, 
 	pssh.Write(PSSmessage)
 	hashed := pssh.Sum(nil)
 
-	signature, err := rsa.SignPSS(rand.Reader, privateKey, newhash, hashed, &opts)
+	signature, err := rsa.SignPSS(rand.Reader, w.privateKey, newhash, hashed, &opts)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	return signature, ciphertext, label, hash, newhash, hashed, opts
 }
-func (w *Wallet) Transfer(from string, to string, value int, privateKey *rsa.PrivateKey) ([]byte, []byte, []byte, hash.Hash, crypto.Hash, []byte, rsa.PSSOptions) {
-	data := from + to + strconv.Itoa(value)
-	signature, ciphertext, label, hash, newhash, hashed, opts := w.Sign(privateKey, data)
+func (w *Wallet) Transfer() ([]byte, []byte, []byte, hash.Hash, crypto.Hash, []byte, rsa.PSSOptions) {
+	/*asn1Bytes, err := x509.MarshalPKIXPublicKey(&w.privateKey.PublicKey)
+	if err != nil {
+		fmt.Print(err)
+		os.Exit(1)
+	}
+	data := string(asn1Bytes[:]) + w.To_address + strconv.Itoa(w.Value)*/
+	fmt.Println(w.privateKey.PublicKey)
+	data := "xxx" + w.To_address + strconv.Itoa(w.Value)
+	signature, ciphertext, label, hash, newhash, hashed, opts := w.Sign(data)
 
 	return signature, ciphertext, label, hash, newhash, hashed, opts
+}
+func (w *Wallet) LoadPrivateKey() error {
+	priv, err := ioutil.ReadFile(w.HomeDir + "/private.key")
+	if err != nil {
+		checkError(err)
+	}
+	privPem, _ := pem.Decode(priv)
+	privPemBytes := privPem.Bytes
+	key, err := x509.ParsePKCS1PrivateKey(privPemBytes)
+	if err != nil {
+		checkError(err)
+	}
+	w.privateKey = key
+	return nil
 }

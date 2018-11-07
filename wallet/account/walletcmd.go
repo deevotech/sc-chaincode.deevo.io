@@ -32,6 +32,10 @@ type WalletCmd struct {
 	typeKey string
 	// options
 	options string
+	// to address
+	to_address string
+	// value of transfer
+	value int
 }
 
 // NewCommand returns new WalletCmd ready for running
@@ -98,11 +102,19 @@ func (s *WalletCmd) init() {
 		if len(args) > 0 {
 			return errors.Errorf(extraArgsError, args, transferCmd.UsageString())
 		}
-		/*err = nil
-		//err := s.getWallet().Transfer()
+		err := s.getWallet().LoadPrivateKey()
 		if err != nil {
 			return err
-		}*/
+		}
+
+		signature, ciphertext, label, hash, newhash, hashed, opts := s.getWallet().Transfer()
+		fmt.Println("signature: ", signature)
+		fmt.Println("ciphertext: ", ciphertext)
+		fmt.Println("label: ", label)
+		fmt.Println("hash: ", hash)
+		fmt.Println("newhash: ", newhash)
+		fmt.Println("hashed: ", hashed)
+		fmt.Println("opts: ", opts)
 		return nil
 	}
 	s.rootCmd.AddCommand(transferCmd)
@@ -121,12 +133,12 @@ func (s *WalletCmd) registerFlags() {
 	// Set specific global flags used by all commands
 	pflags := s.rootCmd.PersistentFlags()
 	// Don't want to use the default parameter for StringVarP. Need to be able to identify if home directory was explicitly set
-	pflags.StringVarP(&s.homeDirectory, "home", "H", "", fmt.Sprintf("Server's home directory (default \"%s\")", filepath.Dir(cfg)))
-	util.FlagString(s.myViper, pflags, "boot", "b", "",
-		"The user:pass for bootstrap admin which is required to build default config file")
+	pflags.StringVarP(&s.homeDirectory, "home", "H", "", fmt.Sprintf("Directory to store wallet (default \"%s\")", filepath.Dir(cfg)))
 	pflags.IntVar(&s.length, "l", 2048, "Length of key")
 	pflags.StringVar(&s.typeKey, "t", "rsa", "type of key")
 	pflags.StringVar(&s.options, "p", "options", "type of key")
+	pflags.StringVar(&s.to_address, "to", "yyyy", "type of key")
+	pflags.IntVar(&s.value, "value", 10, "type of key")
 	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
 	/*if err != nil {
 		panic(err)
@@ -141,9 +153,11 @@ func (s *WalletCmd) configRequired() bool {
 // getServer returns a lib.Server for the init and start commands
 func (s *WalletCmd) getWallet() *lib.Wallet {
 	return &lib.Wallet{
-		HomeDir: s.homeDirectory,
-		TypeKey: s.typeKey,
-		Length:  s.length,
-		Ops:     s.options,
+		HomeDir:    s.homeDirectory,
+		TypeKey:    s.typeKey,
+		Length:     s.length,
+		Ops:        s.options,
+		To_address: s.to_address,
+		Value:      s.value,
 	}
 }
