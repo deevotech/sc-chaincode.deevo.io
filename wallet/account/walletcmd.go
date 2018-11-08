@@ -106,15 +106,15 @@ func (s *WalletCmd) init() {
 		if err != nil {
 			return err
 		}
-		fmt.Println(wallet.TypeKey)
-		/*signature, ciphertext, label, hash, newhash, hashed, opts := wallet.Transfer()
-		fmt.Println("signature: ", signature)
-		fmt.Println("ciphertext: ", ciphertext)
-		fmt.Println("label: ", label)
-		fmt.Println("hash: ", hash)
-		fmt.Println("newhash: ", newhash)
-		fmt.Println("hashed: ", hashed)
-		fmt.Println("opts: ", opts)*/
+
+		r, s, data, err := wallet.Transfer()
+		fmt.Println("r: ", r)
+		fmt.Println("s: ", s)
+		fmt.Println("data: ", data)
+		fmt.Println("Verify")
+		redata, check := wallet.Receive([]byte(data), r, s, data)
+		fmt.Println("check: ", check)
+		fmt.Println("redata: ", redata)
 		return nil
 	}
 	s.rootCmd.AddCommand(transferCmd)
@@ -134,11 +134,11 @@ func (s *WalletCmd) registerFlags() {
 	pflags := s.rootCmd.PersistentFlags()
 	// Don't want to use the default parameter for StringVarP. Need to be able to identify if home directory was explicitly set
 	pflags.StringVarP(&s.homeDirectory, "home", "H", "", fmt.Sprintf("Directory to store wallet (default \"%s\")", filepath.Dir(cfg)))
-	pflags.IntVar(&s.length, "l", 2048, "Length of key")
+	pflags.IntVar(&s.length, "l", 256, "Length of key")
 	pflags.StringVar(&s.typeKey, "t", "rsa", "type of key")
-	pflags.StringVar(&s.options, "p", "options", "type of key")
-	pflags.StringVar(&s.to_address, "to", "yyyy", "type of key")
-	pflags.IntVar(&s.value, "value", 10, "type of key")
+	pflags.StringVar(&s.options, "p", "options", "options")
+	pflags.StringVar(&s.to_address, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
+	pflags.IntVar(&s.value, "value", 10, "Value of transfering")
 	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
 	/*if err != nil {
 		panic(err)
