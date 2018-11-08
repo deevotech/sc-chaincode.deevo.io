@@ -83,7 +83,7 @@ func (s *WalletCmd) init() {
 		if len(args) > 0 {
 			return errors.Errorf(extraArgsError, args, createCmd.UsageString())
 		}
-		err := s.getWallet().Create()
+		err := s.getECDSAWallet().Create()
 		if err != nil {
 			util.Fatal("Creation failure: %s", err)
 		}
@@ -102,19 +102,19 @@ func (s *WalletCmd) init() {
 		if len(args) > 0 {
 			return errors.Errorf(extraArgsError, args, transferCmd.UsageString())
 		}
-		err := s.getWallet().LoadPrivateKey()
+		wallet, err := s.getECDSAWallet().LoadPrivateKey()
 		if err != nil {
 			return err
 		}
-
-		signature, ciphertext, label, hash, newhash, hashed, opts := s.getWallet().Transfer()
+		fmt.Println(wallet.TypeKey)
+		/*signature, ciphertext, label, hash, newhash, hashed, opts := wallet.Transfer()
 		fmt.Println("signature: ", signature)
 		fmt.Println("ciphertext: ", ciphertext)
 		fmt.Println("label: ", label)
 		fmt.Println("hash: ", hash)
 		fmt.Println("newhash: ", newhash)
 		fmt.Println("hashed: ", hashed)
-		fmt.Println("opts: ", opts)
+		fmt.Println("opts: ", opts)*/
 		return nil
 	}
 	s.rootCmd.AddCommand(transferCmd)
@@ -151,11 +151,23 @@ func (s *WalletCmd) configRequired() bool {
 }
 
 // getServer returns a lib.Server for the init and start commands
-func (s *WalletCmd) getWallet() *lib.Wallet {
-	return &lib.Wallet{
+func (s *WalletCmd) getRSAWallet() *lib.RSAWallet {
+	return &lib.RSAWallet{
 		HomeDir:    s.homeDirectory,
 		TypeKey:    s.typeKey,
-		Length:     s.length,
+		KeyLen:     s.length,
+		Ops:        s.options,
+		To_address: s.to_address,
+		Value:      s.value,
+	}
+}
+
+// getServer returns a lib.Server for the init and start commands
+func (s *WalletCmd) getECDSAWallet() *lib.ECDSAWallet {
+	return &lib.ECDSAWallet{
+		HomeDir:    s.homeDirectory,
+		TypeKey:    s.typeKey,
+		KeyLen:     s.length,
 		Ops:        s.options,
 		To_address: s.to_address,
 		Value:      s.value,
