@@ -1,0 +1,10 @@
+{
+    "index": {
+        "fields": [
+            "address"
+        ]
+    },
+    "ddoc": "indexAccountDoc",
+    "name": "indexAccount",
+    "type": "json"
+}
