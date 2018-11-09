@@ -35,7 +35,7 @@ func (w *ECDSAWallet) Create() error {
 	w.Generate()
 	w.savePEMKey("private.key")
 	w.savePublicPEMKey("publickey.key")
-	address, err := w.saveAddress("address.txt")
+	address, err := w.SaveAddress("address.txt")
 	if err != nil {
 		checkError(err)
 	}
@@ -160,7 +160,7 @@ func (w *ECDSAWallet) P2PKHToAddress(pkscript []byte, isTestnet bool) (string, e
 
 	return address, nil
 }
-func (w *ECDSAWallet) saveAddress(fileName string) (string, error) {
+func (w *ECDSAWallet) SaveAddress(fileName string) (string, error) {
 
 	w.CreateDirectory()
 	var path string

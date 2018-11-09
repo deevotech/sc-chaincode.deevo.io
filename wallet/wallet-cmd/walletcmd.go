@@ -106,7 +106,8 @@ func (s *WalletCmd) init() {
 		if err != nil {
 			return err
 		}
-
+		//address, err := wallet.SaveAddress("newaddress.txt")
+		//fmt.Println("newAddress: ", address)
 		r, s, data, err := wallet.Transfer()
 		fmt.Println("r: ", r)
 		fmt.Println("s: ", s)
