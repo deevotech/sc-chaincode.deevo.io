@@ -215,20 +215,27 @@ func (t *AccountChaincode) transfer(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error(err.Error())
 	}
 	accountToTransfer := account{}
-	err = json.Unmarshal(accAsBytesFrom, &accountToTransfer) //unmarshal it aka JSON.parse()
+	err = json.Unmarshal(accAsBytesTo, &accountToTransfer) //unmarshal it aka JSON.parse()
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	publickeyBytes, err := x509.MarshalPKIXPublicKey(accountFromTransfer.Publickey)
-
-	pub, _ := pem.Decode(publickeyBytes)
+	//publickeyBytes, err := x509.MarshalPKIXPublicKey(&accountFromTransfer.Publickey)
+	fmt.Println(accountFromTransfer.Publickey)
+	pub, _ := pem.Decode([]byte(accountFromTransfer.Publickey))
+	if pub == nil {
+		panic("failed to parse PEM block containing the public key")
+	}
 	prepublickey, err := x509.ParsePKIXPublicKey(pub.Bytes)
+	fmt.Println(prepublickey)
 	if err != nil {
-		return shim.Error("Verity not true")
+		return shim.Error("Pre publickey not true")
 	}
 	publicKey := prepublickey.(*ecdsa.PublicKey)
+	fmt.Println("hash: ", hash)
+	fmt.Println("r: ", r)
+	fmt.Println("s: ", s)
 
-	if ecdsa.Verify(publicKey, []byte(hash), r, s) {
+	if !ecdsa.Verify(publicKey, []byte(hash), r, s) {
 		return shim.Error("Verity not true")
 	}
 	if accountFromTransfer.Balance < numValue {
