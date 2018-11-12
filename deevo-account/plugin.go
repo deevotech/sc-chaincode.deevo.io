@@ -40,7 +40,7 @@ type account struct {
 // Main
 // ===================================================================================
 func main() {
-	err := shim.Start(new(AccountChaincode))
+	err := shim.Start(New())
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
