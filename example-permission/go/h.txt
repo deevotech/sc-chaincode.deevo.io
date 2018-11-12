@@ -1,1 +1,0 @@
-openssl ec -in key.pem -pubout -out pub.pem
