@@ -147,7 +147,7 @@ func (t *AccountChaincode) getBalance(stub shim.ChaincodeStubInterface, args []s
 	var err error
 
 	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting name of the org to query")
+		return shim.Error("Incorrect number of arguments. Expecting address of the account to query")
 	}
 
 	address = args[0]
@@ -156,7 +156,7 @@ func (t *AccountChaincode) getBalance(stub shim.ChaincodeStubInterface, args []s
 		jsonResp = "{\"Error\":\"Failed to get state for " + address + "\"}"
 		return shim.Error(jsonResp)
 	} else if valAsbytes == nil {
-		jsonResp = "{\"Error\":\"org does not exist: " + address + "\"}"
+		jsonResp = "{\"Error\":\"account does not exist: " + address + "\"}"
 		return shim.Error(jsonResp)
 	}
 
