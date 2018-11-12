@@ -159,7 +159,7 @@ func (t *AccountChaincode) getBalance(stub shim.ChaincodeStubInterface, args []s
 		jsonResp = "{\"Error\":\"account does not exist: " + address + "\"}"
 		return shim.Error(jsonResp)
 	}
-
+	fmt.Println("Get Account success!")
 	return shim.Success(valAsbytes)
 }
 
