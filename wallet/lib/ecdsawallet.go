@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/cloudflare/redoctober/ecdh"
 )
 
 type ECDSAWallet struct {
@@ -205,4 +206,10 @@ func (w *ECDSAWallet) Transfer() (r, s *big.Int, d string, err error) {
 func (w *ECDSAWallet) Receive(hash []byte, r *big.Int, s *big.Int, d string) (string, bool) {
 	check := w.Verify(hash, r, s)
 	return d, check
+}
+func (w *ECDSAWallet) Encrypt(in []byte) (out []byte, err error) {
+	return ecdh.Encrypt(&w.Priv.PublicKey, in)
+}
+func (w *ECDSAWallet) Decrypt(in []byte) (out []byte, err error) {
+	return ecdh.Decrypt(w.Priv, in)
 }

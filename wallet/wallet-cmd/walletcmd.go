@@ -33,7 +33,7 @@ type WalletCmd struct {
 	// options
 	options string
 	// to address
-	to_address string
+	toAddress string
 	// value of transfer
 	value int
 }
@@ -138,7 +138,7 @@ func (s *WalletCmd) registerFlags() {
 	pflags.IntVar(&s.length, "l", 256, "Length of key")
 	pflags.StringVar(&s.typeKey, "t", "rsa", "type of key")
 	pflags.StringVar(&s.options, "p", "options", "options")
-	pflags.StringVar(&s.to_address, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
+	pflags.StringVar(&s.toAddress, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
 	pflags.IntVar(&s.value, "value", 10, "Value of transfering")
 	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
 	/*if err != nil {
@@ -158,7 +158,7 @@ func (s *WalletCmd) getRSAWallet() *lib.RSAWallet {
 		TypeKey:    s.typeKey,
 		KeyLen:     s.length,
 		Ops:        s.options,
-		To_address: s.to_address,
+		To_address: s.toAddress,
 		Value:      s.value,
 	}
 }
@@ -170,7 +170,7 @@ func (s *WalletCmd) getECDSAWallet() *lib.ECDSAWallet {
 		TypeKey:    s.typeKey,
 		KeyLen:     s.length,
 		Ops:        s.options,
-		To_address: s.to_address,
+		To_address: s.toAddress,
 		Value:      s.value,
 	}
 }
