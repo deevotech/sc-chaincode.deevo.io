@@ -23,17 +23,19 @@ import (
 )
 
 type DeevoWallet struct {
-	DeevoHash []byte
-	Priv      *ecdsa.PrivateKey
-	Key       bccsp.Key
-	PublicKey *ecdsa.PublicKey
-	Address   string
-	HomeDir   string
-	TypeKey   string
-	KeyLen    int
-	Ops       string
-	ToAddress string
-	Value     float64
+	DeevoHash      []byte
+	Priv           *ecdsa.PrivateKey
+	Key            bccsp.Key
+	PublicKey      *ecdsa.PublicKey
+	Address        string
+	HomeDir        string
+	TypeKey        string
+	KeyLen         int
+	Ops            string
+	ToAddress      string
+	Value          float64
+	FabricCaServer string
+	FabricCaPort   string
 }
 
 func (w *DeevoWallet) Save(path string, priv *ecdsa.PrivateKey) error {

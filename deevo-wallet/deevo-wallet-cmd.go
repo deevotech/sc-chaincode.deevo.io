@@ -164,6 +164,26 @@ func (s *WalletCmd) init() {
 		return nil
 	}
 	s.rootCmd.AddCommand(decryptCmd)
+	/*registerCmd := &cobra.Command{
+		Use:   "decrypt",
+		Short: fmt.Sprintf("Decrypt the data", shortName),
+	}
+	registerCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.Errorf(extraArgsError, args, registerCmd.UsageString())
+		}
+		wallet, err := s.getWallet().KeyImport(s.homeDirectory + "/" + s.fileKey)
+		if err != nil {
+			return err
+		}
+		response, err := wallet.Register()
+		if err != nil {
+			return err
+		}
+		fmt.Println("Decrypt data: ", response)
+		return nil
+	}
+	s.rootCmd.AddCommand(decryptCmd)*/
 	s.registerFlags()
 }
 
