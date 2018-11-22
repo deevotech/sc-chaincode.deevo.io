@@ -91,6 +91,7 @@ func (s *WalletCmd) init() {
 			util.Fatal("Creation failure: %s", err)
 		}
 		log.Info("Creation was successful")
+		fmt.Println("Address: ", w.Address)
 		return nil
 	}
 	s.rootCmd.AddCommand(createCmd)
@@ -111,12 +112,11 @@ func (s *WalletCmd) init() {
 		}
 		//address, err := wallet.SaveAddress("newaddress.txt")
 		//fmt.Println("newAddress: ", address)
-		r, s, data, err := wallet.Transfer()
-		fmt.Println("r: ", r)
-		fmt.Println("s: ", s)
-		fmt.Println("data: ", data)
+		signature, data, err := wallet.Transfer()
+		fmt.Println("signature: ", signature)
 		fmt.Println("Verify")
-		redata, check := wallet.Receive([]byte(data), r, s, data)
+
+		redata, check := wallet.Receive(wallet.PublicKey, signature, data)
 		fmt.Println("check: ", check)
 		fmt.Println("redata: ", redata)
 		return nil
@@ -142,8 +142,8 @@ func (s *WalletCmd) registerFlags() {
 	pflags.StringVar(&s.typeKey, "t", "rsa", "type of key")
 	pflags.StringVar(&s.options, "p", "options", "options")
 	pflags.StringVar(&s.toAddress, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
-	pflags.IntVar(&s.value, "value", 10, "Value of transfering")
-	pflags.IntVar(&s.fileKey, "fileKey", "private.key", "file key")
+	pflags.Float64Var(&s.value, "value", 10, "Value of transfering")
+	pflags.StringVar(&s.fileKey, "fileKey", "private.key", "file key")
 	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
 	/*if err != nil {
 		panic(err)

@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -106,8 +105,8 @@ func (w *DeevoWallet) KeyGen(myopts bccsp.KeyGenOpts) (k *DeevoWallet, err error
 		fmt.Println(err.Error())
 	}
 	mykey := key.(*ecdsa.PrivateKey)
-	err = w.Save("/home/datlv/bccsp-deevo/", mykey)
-	myWallet, err := w.KeyImport("/home/datlv/bccsp-deevo/private.key")
+	err = w.Save(w.HomeDir, mykey)
+	myWallet, err := w.KeyImport(w.HomeDir + "private.key")
 	checkError(err)
 	w = myWallet
 	return w, nil
@@ -221,10 +220,6 @@ func (w *DeevoWallet) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.Decrypt
 	// sha256
 	return ecdh.Decrypt(w.Priv, ciphertext)
 }
-func main() {
-	var dwallet = &DeevoWallet{}
-	dwallet.KeyGen(&bccsp.ECDSAP256KeyGenOpts{})
-}
 func checkError(err error) {
 	if err != nil {
 		fmt.Println("Fatal error ", err.Error())
@@ -249,15 +244,15 @@ func (w *DeevoWallet) P2PKHToAddress(pkscript []byte, isTestnet bool) (string, e
 
 	return address, nil
 }
-func (w *DeevoWallet) Transfer() (signature []byte, err error) {
+func (w *DeevoWallet) Transfer() ([]byte, string, error) {
 	current := time.Now()
-	value := strconv.FormatFloat(w.Value, 20, 20, 10)
-	data := w.ToAddress + value + current.Format("2006-01-02 15:04:05.000000")
+	value := fmt.Sprintf("%f", w.Value)
+	data := w.Address + w.ToAddress + value + current.Format("2006010215:04:05.000000")
 	signature, erra := w.Sign(w.Priv, []byte(data), nil)
-	return signature, erra
+	return signature, data, erra
 }
-func (w *DeevoWallet) Receive(publickey *ecdsa.PublicKey, signature []byte, d string) (string, bool) {
-	check, err := w.Verify(publickey, signature, []byte(d), nil)
+func (w *DeevoWallet) Receive(publickey *ecdsa.PublicKey, signature []byte, data string) (string, bool) {
+	check, err := w.Verify(publickey, signature, []byte(data), nil)
 	checkError(err)
-	return d, check
+	return data, check
 }
