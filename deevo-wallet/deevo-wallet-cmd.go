@@ -39,6 +39,8 @@ type WalletCmd struct {
 	value float64
 	// file key
 	fileKey string
+	// data
+	data string
 }
 
 // NewCommand returns new WalletCmd ready for running
@@ -122,6 +124,46 @@ func (s *WalletCmd) init() {
 		return nil
 	}
 	s.rootCmd.AddCommand(transferCmd)
+	encryptCmd := &cobra.Command{
+		Use:   "encrypt",
+		Short: fmt.Sprintf("Encrypt the data", shortName),
+	}
+	encryptCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.Errorf(extraArgsError, args, encryptCmd.UsageString())
+		}
+		wallet, err := s.getWallet().KeyImport(s.homeDirectory + "/" + s.fileKey)
+		if err != nil {
+			return err
+		}
+		dataEncrypt, err := wallet.Encrypt(nil, []byte(s.data), nil)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Encrypt data byte: ", dataEncrypt)
+		return nil
+	}
+	s.rootCmd.AddCommand(encryptCmd)
+	decryptCmd := &cobra.Command{
+		Use:   "decrypt",
+		Short: fmt.Sprintf("Decrypt the data", shortName),
+	}
+	decryptCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.Errorf(extraArgsError, args, decryptCmd.UsageString())
+		}
+		wallet, err := s.getWallet().KeyImport(s.homeDirectory + "/" + s.fileKey)
+		if err != nil {
+			return err
+		}
+		dataDecrypt, err := wallet.Decrypt(nil, []byte(s.data), nil)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Decrypt data: ", dataDecrypt)
+		return nil
+	}
+	s.rootCmd.AddCommand(decryptCmd)
 	s.registerFlags()
 }
 
@@ -144,6 +186,7 @@ func (s *WalletCmd) registerFlags() {
 	pflags.StringVar(&s.toAddress, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
 	pflags.Float64Var(&s.value, "value", 10, "Value of transfering")
 	pflags.StringVar(&s.fileKey, "fileKey", "private.key", "file key")
+	pflags.StringVar(&s.data, "data", "Helloworld!", "data")
 	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
 	/*if err != nil {
 		panic(err)
