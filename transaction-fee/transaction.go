@@ -37,7 +37,7 @@ func (t *TxFeeChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	// Handle different functions
 	if function == "ReadObject" { //change name of a specific account
 		return t.readObject(stub, args)
-	} else if function == "CreateNewObject" { //transfer
+	} else if function == "CreateObject" { //transfer
 		return t.createObject(stub, args)
 	} else if function == "UpdateObject" { //transfer
 		return t.updateObject(stub, args)
