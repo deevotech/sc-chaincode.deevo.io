@@ -1,185 +1,168 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"hash"
-	"log"
-	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/cloudflare/cfssl/csr"
+	"github.com/cloudflare/cfssl/log"
+	"github.com/deevotech/sc-chaincode.deevo.io/deevo-wallet/lib"
 	"github.com/deevotech/sc-chaincode.deevo.io/deevo-wallet/util"
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/factory"
-	"github.com/hyperledger/fabric/bccsp/utils"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-type DeevoWallet struct {
+const (
+	version = "version"
+)
+
+type WalletCmd struct {
+	// name of the wallet command (init, start, version)
+	name string
+	// rootCmd is the cobra command
+	rootCmd *cobra.Command
+	// My viper instance
+	myViper *viper.Viper
+	// homeDirectory is the location of the wallet's home directory
+	homeDirectory string
+	// length
+	length int
+	// type of keypairs
+	typeKey string
+	// options
+	options string
+	// to address
+	toAddress string
+	// value of transfer
+	value float64
+	// file key
+	fileKey string
 }
 
-func (w *DeevoWallet) Save(path string, priv *ecdsa.PrivateKey) error {
-	err := os.MkdirAll(path, 0755)
-	if err != nil {
-		checkError(err)
+// NewCommand returns new WalletCmd ready for running
+func NewCommand(name string) *WalletCmd {
+	s := &WalletCmd{
+		name:    name,
+		myViper: viper.New(),
 	}
-	outFile, err := os.Create(path + "private.key")
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(0)
-	}
-
-	defer outFile.Close()
-	keyDer, err := x509.MarshalECPrivateKey(priv)
-	if err != nil {
-		log.Fatalf("Failed to serialize ECDSA key: %s\n", err)
-	}
-	var privateKey = &pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: keyDer,
-	}
-	err = pem.Encode(outFile, privateKey)
-	outFile, err = os.Create(path + "public.key")
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(0)
-	}
-
-	defer outFile.Close()
-	asn1Bytes, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(0)
-	}
-
-	var pemkey = &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: asn1Bytes,
-	}
-	err = pem.Encode(outFile, pemkey)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(0)
-	}
-	return nil
+	s.init()
+	return s
 }
 
-// New returns a new instance of the BCCSP implementation
-func (w *DeevoWallet) KeyGen(myopts bccsp.KeyGenOpts) (k bccsp.Key, err error) {
+// Execute runs this WalletCmd
+func (s *WalletCmd) Execute() error {
+	return s.rootCmd.Execute()
+}
 
-	bkr := csr.NewBasicKeyRequest()
-	key, err := bkr.Generate()
-	if err != nil {
-		fmt.Println(err.Error())
+// init initializes the WalletCmd instance
+// It intializes the cobra root and sub commands and
+// registers command flgs with viper
+func (s *WalletCmd) init() {
+	// root command
+	rootCmd := &cobra.Command{
+		Use:   cmdName,
+		Short: longName,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			err := s.configInit()
+			if err != nil {
+				return err
+			}
+			cmd.SilenceUsage = true
+			util.CmdRunBegin(s.myViper)
+			return nil
+		},
 	}
-	mykey := key.(*ecdsa.PrivateKey)
-	fmt.Println(mykey.PublicKey)
-	err = w.Save("/home/datlv/bccsp-deevo/", mykey)
-	myBCCSP, err := w.KeyImport("/home/datlv/bccsp-deevo/private.key")
-	checkError(err)
-	return myBCCSP, nil
-}
+	s.rootCmd = rootCmd
 
-// KeyDeriv derives a key from k using opts.
-// The opts argument should be appropriate for the primitive used.
-func (w *DeevoWallet) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (dk bccsp.Key, err error) {
-	return nil, nil
-}
+	// create represents the server create command
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: fmt.Sprintf("Initialize the %s", shortName),
+		Long:  "Generate the key pairs",
+	}
+	createCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.Errorf(extraArgsError, args, createCmd.UsageString())
+		}
+		w, err := s.getWallet().KeyGen(&bccsp.ECDSAP256KeyGenOpts{})
+		if err != nil {
+			util.Fatal("Creation failure: %s", err)
+		}
+		log.Info("Creation was successful")
+		return nil
+	}
+	s.rootCmd.AddCommand(createCmd)
 
-// KeyImport imports a key from its raw representation using opts.
-// The opts argument should be appropriate for the primitive used.
-func (w *DeevoWallet) KeyImport(fileKey string) (k bccsp.Key, err error) {
-	var myCSP bccsp.BCCSP
-	var mspDir = "msp"
-	opts := factory.GetDefaultOpts()
-	opts.SwOpts.FileKeystore = &factory.FileKeystoreOpts{KeyStorePath: os.TempDir()}
-	opts.SwOpts.Ephemeral = false
-	myCSP, err = util.InitBCCSP(&opts, "", mspDir)
-	myBCCSP, err := util.ImportBCCSPKeyFromPEM(fileKey, myCSP, false)
-	checkError(err)
-	return myBCCSP, nil
-}
-
-// GetKey returns the key this CSP associates to
-// the Subject Key Identifier ski.
-func (w *DeevoWallet) GetKey(ski []byte) (k bccsp.Key, err error) {
-	return nil, nil
-}
-
-// Hash hashes messages msg using options opts.
-// If opts is nil, the default hash function will be used.
-func (w *DeevoWallet) Hash(msg []byte, opts bccsp.HashOpts) (hash []byte, err error) {
-	h :=
-		h.Write(msg)
-	return h.Sum(nil), nil
-}
-
-// GetHash returns and instance of hash.Hash using options opts.
-// If opts is nil, the default hash function will be returned.
-func (w *DeevoWallet) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error) {
-	return nil, nil
-}
-
-// Sign signs digest using key k.
-// The opts argument should be appropriate for the algorithm used.
-//
-// Note that when a signature of a hash of a larger message is needed,
-// the caller is responsible for hashing the larger message and passing
-// the hash (as digest).
-func (w *DeevoWallet) Sign(k *ecdsa.PrivateKey, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
-	r, s, err := ecdsa.Sign(rand.Reader, k, digest)
-	if err != nil {
-		return nil, err
+	// transferCmd represents the server transfer command
+	transferCmd := &cobra.Command{
+		Use:   "transfer",
+		Short: fmt.Sprintf("Transfer the %s", shortName),
 	}
 
-	s, _, err = utils.ToLowS(&k.PublicKey, s)
-	if err != nil {
-		return nil, err
+	transferCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.Errorf(extraArgsError, args, transferCmd.UsageString())
+		}
+		wallet, err := s.getWallet().KeyImport(s.homeDirectory + "/" + s.fileKey)
+		if err != nil {
+			return err
+		}
+		//address, err := wallet.SaveAddress("newaddress.txt")
+		//fmt.Println("newAddress: ", address)
+		r, s, data, err := wallet.Transfer()
+		fmt.Println("r: ", r)
+		fmt.Println("s: ", s)
+		fmt.Println("data: ", data)
+		fmt.Println("Verify")
+		redata, check := wallet.Receive([]byte(data), r, s, data)
+		fmt.Println("check: ", check)
+		fmt.Println("redata: ", redata)
+		return nil
 	}
-
-	return utils.MarshalECDSASignature(r, s)
+	s.rootCmd.AddCommand(transferCmd)
+	s.registerFlags()
 }
 
-// Verify verifies signature against key k and digest
-// The opts argument should be appropriate for the algorithm used.
-func (w *DeevoWallet) Verify(k *ecdsa.PublicKey, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
-	r, s, err := utils.UnmarshalECDSASignature(signature)
-	if err != nil {
-		return false, fmt.Errorf("Failed unmashalling signature [%s]", err)
-	}
+// registerFlags registers command flags with viper
+func (s *WalletCmd) registerFlags() {
+	// Get the default config file path
+	cfg := util.GetDefaultConfigFile(cmdName)
 
-	lowS, err := utils.IsLowS(k, s)
-	if err != nil {
-		return false, err
-	}
+	// All env variables must be prefixed
+	s.myViper.SetEnvPrefix(envVarPrefix)
+	s.myViper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	if !lowS {
-		return false, fmt.Errorf("Invalid S. Must be smaller than half the order [%s][%s].", s, utils.GetCurveHalfOrdersAt(k.Curve))
-	}
-
-	return ecdsa.Verify(k, digest, r, s), nil
+	// Set specific global flags used by all commands
+	pflags := s.rootCmd.PersistentFlags()
+	// Don't want to use the default parameter for StringVarP. Need to be able to identify if home directory was explicitly set
+	pflags.StringVarP(&s.homeDirectory, "home", "H", "", fmt.Sprintf("Directory to store wallet (default \"%s\")", filepath.Dir(cfg)))
+	pflags.IntVar(&s.length, "l", 256, "Length of key")
+	pflags.StringVar(&s.typeKey, "t", "rsa", "type of key")
+	pflags.StringVar(&s.options, "p", "options", "options")
+	pflags.StringVar(&s.toAddress, "to", "113yvjFhnmGYN2PaXfD5XT9TDHGbRUyTykiBJ7X3fFG9CMsMCXkr4JksWG2oRy7rpWLkGTM48HhHKLPyDNv8jXoh7jjSYy9zLS9sJw1X2vE2P4Pc66hJtoirwxN8j", "address of account")
+	pflags.IntVar(&s.value, "value", 10, "Value of transfering")
+	pflags.IntVar(&s.fileKey, "fileKey", "private.key", "file key")
+	//err := util.RegisterFlags(s.myViper, pflags, nil, nil)
+	/*if err != nil {
+		panic(err)
+	}*/
 }
 
-// Encrypt encrypts plaintext using key k.
-// The opts argument should be appropriate for the algorithm used.
-func (w *DeevoWallet) Encrypt(k bccsp.Key, plaintext []byte, opts bccsp.EncrypterOpts) (ciphertext []byte, err error) {
-	return nil, nil
+// Configuration file is not required for some commands like version
+func (s *WalletCmd) configRequired() bool {
+	return s.name != version
 }
 
-// Decrypt decrypts ciphertext using key k.
-// The opts argument should be appropriate for the algorithm used.
-func (w *DeevoWallet) Decrypt(k bccsp.Key, ciphertext []byte, opts bccsp.DecrypterOpts) (plaintext []byte, err error) {
-	return nil, nil
-}
-func main() {
-	var dwallet = &DeevoWallet{}
-	dwallet.KeyGen(&bccsp.ECDSAP256KeyGenOpts{})
-}
-func checkError(err error) {
-	if err != nil {
-		fmt.Println("Fatal error ", err.Error())
-		os.Exit(1)
+// getServer returns a lib.Server for the init and start commands
+func (s *WalletCmd) getWallet() *lib.DeevoWallet {
+	return &lib.DeevoWallet{
+		HomeDir:   s.homeDirectory,
+		TypeKey:   s.typeKey,
+		KeyLen:    s.length,
+		Ops:       s.options,
+		ToAddress: s.toAddress,
+		Value:     s.value,
 	}
 }
