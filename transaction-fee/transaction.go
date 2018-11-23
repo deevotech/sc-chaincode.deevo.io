@@ -9,6 +9,13 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
+type account struct {
+	ObjectType string  `json:"docType"`
+	Publickey  string  `json:"publickey"`
+	Address    string  `json:"address"`
+	Balance    float64 `json:"balance"`
+}
+
 // TxFeeChaincode example simple Chaincode implementation
 type TxFeeChaincode struct {
 }
@@ -102,6 +109,15 @@ func (t *TxFeeChaincode) createObject(stub shim.ChaincodeStubInterface, args []s
 	if response.Status != shim.OK {
 		return shim.Error(response.Message)
 	}
+	accountFromTransfer := account{}
+	err = json.Unmarshal(response.Payload, &accountFromTransfer)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if accountFromTransfer.Balance < 0 {
+		return shim.Error("balance < 0 ")
+	}
+	fmt.Println("balance: %f", accountFromTransfer.Balance)
 	fmt.Println("Signature: " + signature)
 	fmt.Println("Signature: " + fee)
 	//return shim.Success(nil)
