@@ -117,7 +117,7 @@ func (t *TxFeeChaincode) createObject(stub shim.ChaincodeStubInterface, args []s
 	if accountFromTransfer.Balance < 0 {
 		return shim.Error("balance < 0 ")
 	}
-	fmt.Println("balance: %f", accountFromTransfer.Balance)
+	fmt.Println("balance: ", accountFromTransfer.Balance)
 	fmt.Println("Signature: " + signature)
 	fmt.Println("Signature: " + fee)
 	//return shim.Success(nil)
