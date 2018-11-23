@@ -145,7 +145,7 @@ func (t *TxFeeChaincode) createObject(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error(err.Error())
 	}
 
-	indexName := "id"
+	indexName := "indexMyObject"
 	idIndexKey, err := stub.CreateCompositeKey(indexName, []string{id})
 	if err != nil {
 		return shim.Error(err.Error())
